@@ -9,7 +9,7 @@
 #define EXAMPLES_BLE_GATEWAY_DEMO_MAIN_SD_CARD_TASK_H_
 
 
-void sd_card_task(void);
+void sd_card_task(void *pvParameter);
 
 
 #endif /* EXAMPLES_BLE_GATEWAY_DEMO_MAIN_SD_CARD_TASK_H_ */

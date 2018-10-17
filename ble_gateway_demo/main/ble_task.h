@@ -35,11 +35,11 @@ typedef struct
 }scan_rst_node_t;
 
 
-void scan_result_nodes_init(void);
+void ble_scan_result_init(void);
 void device_mac_add(esp_ble_gap_cb_param_t* scanned_dev);
-void scan_result_nodes_print(void);
+void ble_scan_result_print(void);
 void ble_scan_result_task(void *pvParameters);
-void ble_task(void);
+void ble_task(void *pvParameter);
 
 
 

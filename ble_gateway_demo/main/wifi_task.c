@@ -31,6 +31,7 @@
     can be sorted based on Authentication Mode or Signal Strength. The priority
     for the Authentication mode is:  WPA2 > WPA > WEP > Open
 */
+#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -39,9 +40,10 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
 
-#include <stdio.h>
+#include "global_config.h"
+#include "lcd.h"
+
 
 /*Set the SSID and Password via "make menuconfig"*/
 #define DEFAULT_SSID	0
@@ -65,6 +67,7 @@
 
 #if CONFIG_FAST_SCAN_THRESHOLD
 	#define DEFAULT_RSSI			CONFIG_FAST_SCAN_MINIMUM_SIGNAL
+
 	#if CONFIG_EXAMPLE_OPEN
 		#define DEFAULT_AUTHMODE 	WIFI_AUTH_OPEN
 	#elif CONFIG_EXAMPLE_WEP
@@ -81,10 +84,22 @@
 	#define DEFAULT_AUTHMODE		WIFI_AUTH_OPEN
 #endif /*CONFIG_FAST_SCAN_THRESHOLD*/
 
+
+#define MAX_WIFI_NUM			20
 static const char *TAG = "scan";
-uint16_t scan_ap_num = 0;
-volatile uint8_t scan_flag = 0;
-wifi_ap_record_t scan_result[50];
+
+uint16_t *scan_ap_num = NULL;
+volatile uint8_t *scan_flag = NULL;
+wifi_ap_record_t *scan_result = NULL;
+char *print_temp = NULL;
+//wifi_scan_config_t *wifi_scan_config = NULL;
+wifi_scan_config_t wifi_scan_config =
+{
+	.ssid = NULL,
+	.bssid = NULL,
+	.channel = 0,
+	.show_hidden = 1
+};
 
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -100,9 +115,11 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
             break;
         case SYSTEM_EVENT_SCAN_DONE:
-        	esp_wifi_scan_get_ap_num(&scan_ap_num);
-        	printf("Scan done.%d AP scanned: \n", scan_ap_num);
-        	scan_flag = 1;
+        	esp_wifi_scan_get_ap_num(scan_ap_num);
+        	printf("Scan done.%d AP scanned: \n", *scan_ap_num);
+        	if(*scan_ap_num > MAX_WIFI_NUM)
+        		*scan_ap_num = MAX_WIFI_NUM;
+        	*scan_flag = 1;
             break;
         default:
             break;
@@ -110,9 +127,72 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-/* Initialize Wi-Fi as sta and set scan method */
-static void wifi_scan(void)
+
+void wifi_scan_result_print(void)
 {
+	uint16_t i;
+
+	sprintf(print_temp, "Scan done.%d AP scanned:", *scan_ap_num);
+	LCD_ShowString(0, 0, (const uint8_t *)print_temp);
+
+	for(i=0;i<*scan_ap_num;i++)
+	{
+		sprintf(print_temp, " %20.20s | %d", scan_result[i].ssid, scan_result[i].rssi);
+//				sprintf(ap_mac, "%02X:%02X:%02X:%02X:%02X:%02X"
+//								, scan_result[i].bssid[0]
+//								, scan_result[i].bssid[1]
+//								, scan_result[i].bssid[2]
+//								, scan_result[i].bssid[3]
+//								, scan_result[i].bssid[4]
+//								, scan_result[i].bssid[5]);
+//				printf(" %-18.18s| ", ap_mac);
+		printf("%s\n", print_temp);
+
+		if(i<14)
+		{
+			LCD_ShowString(8, 16*i+16, (const uint8_t *)print_temp);
+		}
+	}
+	if(i<=14)
+	{
+		LCD_Fill(0, 16*i, 239, 239, BLACK);
+	}
+	ESP_ERROR_CHECK(esp_wifi_scan_start(&wifi_scan_config, 0));
+	printf("Scanning...\n");
+}
+
+
+void wifi_task_mem_free(void)
+{
+	ESP_ERROR_CHECK(esp_wifi_scan_stop());
+	ESP_ERROR_CHECK(esp_wifi_stop());
+	ESP_ERROR_CHECK(esp_wifi_deinit());
+
+	free(scan_ap_num);
+	free(scan_flag);
+	free(scan_result);
+	free(print_temp);
+//	free(wifi_scan_config);
+}
+
+
+void wifi_task(void *pvParameter)
+{
+	scan_ap_num = (uint16_t *)malloc(sizeof(uint16_t));
+	scan_flag = (volatile uint8_t *)malloc(sizeof(uint8_t));
+	scan_result = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t)*MAX_WIFI_NUM);
+	print_temp = (char *)malloc(sizeof(uint8_t)*40);
+//	wifi_scan_config = (wifi_scan_config_t *)malloc(sizeof(wifi_scan_config_t));
+//
+//	wifi_scan_config->ssid = NULL;
+//	wifi_scan_config->bssid = NULL;
+//	wifi_scan_config->channel = 0;
+//	wifi_scan_config->show_hidden = 1;
+//	wifi_scan_config->scan_type = WIFI_SCAN_TYPE_ACTIVE;
+//	wifi_scan_config->scan_time.active.min = 1000;
+//	wifi_scan_config->scan_time.active.max = 2000;
+
+	/* Initialize Wi-Fi as sta and set scan method */
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -120,51 +200,17 @@ static void wifi_scan(void)
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));	// Set the WiFi API configuration storage type
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
-}
 
-void wifi_task()
-{
-	char ap_mac[18];
-
-	wifi_scan_config_t wifi_scan_config =
-	{
-		.ssid = NULL,
-		.bssid = NULL,
-		.channel = 0,
-		.show_hidden = 1
-	};
-
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( ret );
-
-    wifi_scan();
     printf("Scanning...\n");
     ESP_ERROR_CHECK(esp_wifi_scan_start(&wifi_scan_config, 1));
+
     for (;;)
     {
-    	if(scan_flag == 1)
+    	if(*scan_flag == 1)
     	{
-			ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&scan_ap_num, scan_result));
-			for(uint16_t i=0;i<scan_ap_num;i++)
-			{
-				printf("    %26.26s | ", scan_result[i].ssid);
-				sprintf(ap_mac, "%X:%X:%X:%X:%X:%X",	scan_result[i].bssid[0]
-													,	scan_result[i].bssid[1]
-													,	scan_result[i].bssid[2]
-													,	scan_result[i].bssid[3]
-													,	scan_result[i].bssid[4]
-													,	scan_result[i].bssid[5]);
-				printf(" %-18.18s | ", ap_mac);
-				printf("%d \n", scan_result[i].rssi);
-			}
-			ESP_ERROR_CHECK(esp_wifi_scan_start(&wifi_scan_config, 0));
-			printf("Scanning...\n");
-			scan_flag = 0;
+			ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(scan_ap_num, scan_result));
+			xEventGroupSetBits(ble_event_group, LCD_WIFI_UPDATE_BIT);
+			*scan_flag = 0;
     	}
     	vTaskDelay(100 / portTICK_PERIOD_MS);
     }

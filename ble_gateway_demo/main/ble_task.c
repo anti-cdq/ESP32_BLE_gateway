@@ -10,8 +10,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "nvs.h"
-#include "nvs_flash.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -31,7 +29,7 @@
 #include "led_control.h"
 #include "button.h"
 
-#include "globel_config.h"
+#include "global_config.h"
 #include "ble_task.h"
 
 #define GATTC_TAG "GATTC_DEMO"
@@ -424,7 +422,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
 }
 
 
-void scan_result_nodes_init(void)
+void ble_scan_result_init(void)
 {
 	uint8_t i, j;
 	for(i=0;i<SCAN_DEV_NODE_NUM;i++)
@@ -480,7 +478,7 @@ void device_mac_add(esp_ble_gap_cb_param_t* scanned_dev)
 }
 
 
-void scan_result_nodes_print(void)
+void ble_scan_result_print(void)
 {
 	char print_temp[30];
 	char mac[18];
@@ -546,16 +544,11 @@ void ble_scan_result_task(void *pvParameters)
 }
 
 
-void ble_task(void)
+void ble_task(void *pvParameter)
 {
-	scan_result_nodes_init();
+	esp_err_t ret;
 
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( ret );
+	ble_scan_result_init();
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
@@ -584,7 +577,7 @@ void ble_task(void)
         return;
     }
 
-    xTaskCreate(&ble_scan_result_task, "BLE SCAN RESULT", 2048, NULL, 15, NULL);//创建扫描任务
+    xTaskCreate(ble_scan_result_task, "BLE SCAN RESULT", 2048, NULL, 15, NULL);//创建扫描任务
 
     //register the  callback function to the gap module
     ret = esp_ble_gap_register_callback(esp_gap_cb);
@@ -607,5 +600,10 @@ void ble_task(void)
     esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
     if (local_mtu_ret){
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
+    }
+
+    while(1)
+    {
+    	vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }

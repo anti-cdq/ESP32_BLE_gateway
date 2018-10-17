@@ -46,7 +46,6 @@ void scan_files(char* path)
 {
 	DIR * dir;
 	struct dirent * ptr;
-	int i;
 	dir = opendir(path);
 	while((ptr = readdir(dir)) != NULL)
 	{
@@ -56,7 +55,7 @@ void scan_files(char* path)
 }
 
 
-void sd_card_task(void)
+void sd_card_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "Initializing SD card");
 

@@ -322,7 +322,7 @@ void LCD_ShowNum(uint16_t x,uint16_t y,uint32_t num,uint8_t len)
 {         	
 	uint8_t t,temp;
 	uint8_t enshow=0;
-	num = (uint16_t)num;
+
 	for(t=0;t<len;t++)
 	{
 		temp=(num/mypow(10,len-t-1))%10;

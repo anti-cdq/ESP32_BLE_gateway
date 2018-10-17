@@ -18,7 +18,7 @@
 #if LCD_USE_HARDWARE_SPI
 
 
-uint16_t BACK_COLOR = YELLOW, POINT_COLOR = BLACK;
+uint16_t BACK_COLOR = BLACK, POINT_COLOR = YELLOW;
 //To speed up transfers, every SPI transfer sends a bunch of lines. This define specifies how many. More means more memory use,
 //but less overhead for setting up / finishing transfers. Make sure 240 is dividable by this.
 #define PARALLEL_LINES 16
@@ -372,7 +372,8 @@ void LCD_ShowChar(uint16_t x,uint16_t y,uint8_t num)
 uint32_t mypow(uint8_t m,uint8_t n)
 {
 	uint32_t result=1;
-	while(n--)result*=m;
+	while(n--)
+		result*=m;
 	return result;
 }
 
@@ -381,20 +382,22 @@ void LCD_ShowNum(uint16_t x,uint16_t y,uint32_t num,uint8_t len)
 {
 	uint8_t t,temp;
 	uint8_t enshow=0;
-	num = (uint16_t)num;
+
 	for(t=0;t<len;t++)
 	{
 		temp=(num/mypow(10,len-t-1))%10;
-		if(enshow == 0&&t<(len-1))
+		if(enshow == 0 && t<(len-1))
 		{
 			if(temp==0)
 			{
-				LCD_ShowChar(x+8*t,y,' ');
+				LCD_ShowChar(x+8*t, y, ' ');
 				continue;
-			}else enshow=1;
+			}
+			else
+				enshow=1;
 
 		}
-	 	LCD_ShowChar(x+8*t,y,temp+48);
+	 	LCD_ShowChar(x+8*t, y, temp+'0');
 	}
 }
 
