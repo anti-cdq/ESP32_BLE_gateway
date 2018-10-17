@@ -87,6 +87,7 @@
 
 #define MAX_WIFI_NUM			20
 static const char *TAG = "scan";
+static uint8_t preinit_flag = 0;
 
 uint16_t *scan_ap_num = NULL;
 volatile uint8_t *scan_flag = NULL;
@@ -192,9 +193,15 @@ void wifi_task(void *pvParameter)
 //	wifi_scan_config->scan_time.active.min = 1000;
 //	wifi_scan_config->scan_time.active.max = 2000;
 
-	/* Initialize Wi-Fi as sta and set scan method */
-    tcpip_adapter_init();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+	/* For esp-idf current not support deinit, init for tcpip adapter and event loop only do once. */
+	if(preinit_flag == 0)
+	{
+		preinit_flag = 1;
+		/* Initialize Wi-Fi as sta and set scan method */
+	    tcpip_adapter_init();
+	    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+	}
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));	// Set the WiFi API configuration storage type

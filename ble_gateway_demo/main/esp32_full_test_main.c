@@ -33,6 +33,10 @@ const int LCD_NUM_UPDATE_BIT = BIT2;
 const int LCD_WIFI_UPDATE_BIT = BIT3;
 const int WIFI_TASK_START_BIT = BIT4;
 const int WIFI_TASK_STOP_BIT = BIT5;
+const int BLE_TASK_START_BIT = BIT6;
+const int BLE_TASK_STOP_BIT = BIT7;
+const int SD_CARD_TASK_START_BIT = BIT8;
+const int SD_CARD_TASK_STOP_BIT = BIT9;
 
 EventGroupHandle_t ble_event_group;	//定义一个事件的句柄
 portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
@@ -154,7 +158,10 @@ void app_main()
 
 	while(1)
 	{
-		event_bits = xEventGroupWaitBits(ble_event_group, LCD_NUM_UPDATE_BIT | LCD_BLE_UPDATE_BIT | LCD_WIFI_UPDATE_BIT | WIFI_TASK_START_BIT | WIFI_TASK_STOP_BIT, 0, 0, portMAX_DELAY);
+		event_bits = xEventGroupWaitBits(ble_event_group,
+				LCD_NUM_UPDATE_BIT | LCD_BLE_UPDATE_BIT | LCD_WIFI_UPDATE_BIT |
+				WIFI_TASK_START_BIT | WIFI_TASK_STOP_BIT |
+				BLE_TASK_START_BIT | BLE_TASK_STOP_BIT, 0, 0, portMAX_DELAY);
 
 		if(event_bits & LCD_NUM_UPDATE_BIT)
 		{
@@ -176,6 +183,33 @@ void app_main()
 			xEventGroupClearBits(ble_event_group, LCD_WIFI_UPDATE_BIT);
 		}
 
+
+		if(event_bits & SD_CARD_TASK_START_BIT)
+		{
+		    xTaskCreate(sd_card_task, "sd_card_task", configMINIMAL_STACK_SIZE, &task_temp_params, 12, &task_temp_handle);
+			xEventGroupClearBits(ble_event_group, SD_CARD_TASK_START_BIT);
+		}
+		if(event_bits & SD_CARD_TASK_STOP_BIT)
+		{
+			vTaskDelete(task_temp_handle);
+			ble_task_mem_free();
+			xEventGroupClearBits(ble_event_group, SD_CARD_TASK_STOP_BIT);
+		}
+
+
+		if(event_bits & BLE_TASK_START_BIT)
+		{
+		    xTaskCreate(ble_task, "ble_task", 4096, &task_temp_params, 12, &task_temp_handle);
+			xEventGroupClearBits(ble_event_group, BLE_TASK_START_BIT);
+		}
+		if(event_bits & BLE_TASK_STOP_BIT)
+		{
+			vTaskDelete(task_temp_handle);
+			ble_task_mem_free();
+			xEventGroupClearBits(ble_event_group, BLE_TASK_STOP_BIT);
+		}
+
+
 		if(event_bits & WIFI_TASK_START_BIT)
 		{
 		    xTaskCreate(wifi_task, "wifi_task", 4096, &task_temp_params, 12, &task_temp_handle);
@@ -187,7 +221,6 @@ void app_main()
 			wifi_task_mem_free();
 			xEventGroupClearBits(ble_event_group, WIFI_TASK_STOP_BIT);
 		}
-
 	}
 }
 

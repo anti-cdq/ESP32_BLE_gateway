@@ -524,23 +524,13 @@ void ble_scan_result_print(void)
 }
 
 
-void ble_scan_result_task(void *pvParameters)
+void ble_task_mem_free(void)
 {
-	while(1)
-	{
-		adc_power_off();
-	    gpio_set_direction(36, GPIO_MODE_INPUT);
-	    gpio_wakeup_disable(36);
-
-		xEventGroupWaitBits(ble_event_group, SCAN_RESULT_BIT, 0, 1, portMAX_DELAY);    //等待事件被置位，即等待扫描完成
-		xEventGroupClearBits(ble_event_group, SCAN_RESULT_BIT);//清除事件标志位
-		led_on();
-		ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
-		ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
-		xEventGroupSetBits(ble_event_group, LCD_BLE_UPDATE_BIT);
-		scanned_dev_num = 0;
-		esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
-	}
+	free(scan_ap_num);
+	free(scan_flag);
+	free(scan_result);
+	free(print_temp);
+//	free(wifi_scan_config);
 }
 
 
@@ -577,8 +567,6 @@ void ble_task(void *pvParameter)
         return;
     }
 
-    xTaskCreate(ble_scan_result_task, "BLE SCAN RESULT", 2048, NULL, 15, NULL);//创建扫描任务
-
     //register the  callback function to the gap module
     ret = esp_ble_gap_register_callback(esp_gap_cb);
     if (ret){
@@ -602,8 +590,15 @@ void ble_task(void *pvParameter)
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
 
-    while(1)
-    {
-    	vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
+	while(1)
+	{
+		xEventGroupWaitBits(ble_event_group, SCAN_RESULT_BIT, 0, 1, portMAX_DELAY);    //等待事件被置位，即等待扫描完成
+		xEventGroupClearBits(ble_event_group, SCAN_RESULT_BIT);//清除事件标志位
+		led_on();
+		ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
+		ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
+		xEventGroupSetBits(ble_event_group, LCD_BLE_UPDATE_BIT);
+		scanned_dev_num = 0;
+		esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
+	}
 }

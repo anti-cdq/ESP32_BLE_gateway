@@ -16,8 +16,14 @@ extern const int SCAN_RESULT_BIT;			//¶¨ÒåÊÂ¼þ£¬Õ¼ÓÃÊÂ¼þ±äÁ¿µÄµÚ0Î»£¬×î¶à¿ÉÒÔ¶¨Ò
 extern const int LCD_BLE_UPDATE_BIT;
 extern const int LCD_NUM_UPDATE_BIT;
 extern const int LCD_WIFI_UPDATE_BIT;
-const int WIFI_TASK_START_BIT;
-const int WIFI_TASK_STOP_BIT;
+extern const int WIFI_TASK_START_BIT;
+extern const int WIFI_TASK_STOP_BIT;
+extern const int BLE_TASK_START_BIT;
+extern const int BLE_TASK_STOP_BIT;
+extern const int SD_CARD_TASK_START_BIT;
+extern const int SD_CARD_TASK_STOP_BIT;
+
+
 
 extern EventGroupHandle_t ble_event_group;	//¶¨ÒåÒ»¸öÊÂ¼þµÄ¾ä±ú
 
