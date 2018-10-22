@@ -25,6 +25,7 @@
 #include "button.h"
 #include "ble_task.h"
 #include "wifi_task.h"
+#include "sd_card_task.h"
 
 /************ global variables ************/
 const int SCAN_RESULT_BIT = BIT0;				//定义事件，占用事件变量的第0位，最多可以定义32个事件。

@@ -173,7 +173,6 @@ void wifi_task_mem_free(void)
 	free(scan_flag);
 	free(scan_result);
 	free(print_temp);
-//	free(wifi_scan_config);
 }
 
 
@@ -183,15 +182,6 @@ void wifi_task(void *pvParameter)
 	scan_flag = (volatile uint8_t *)malloc(sizeof(uint8_t));
 	scan_result = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t)*MAX_WIFI_NUM);
 	print_temp = (char *)malloc(sizeof(uint8_t)*40);
-//	wifi_scan_config = (wifi_scan_config_t *)malloc(sizeof(wifi_scan_config_t));
-//
-//	wifi_scan_config->ssid = NULL;
-//	wifi_scan_config->bssid = NULL;
-//	wifi_scan_config->channel = 0;
-//	wifi_scan_config->show_hidden = 1;
-//	wifi_scan_config->scan_type = WIFI_SCAN_TYPE_ACTIVE;
-//	wifi_scan_config->scan_time.active.min = 1000;
-//	wifi_scan_config->scan_time.active.max = 2000;
 
 	/* For esp-idf current not support deinit, init for tcpip adapter and event loop only do once. */
 	if(preinit_flag == 0)

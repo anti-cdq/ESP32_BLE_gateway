@@ -526,10 +526,10 @@ void ble_scan_result_print(void)
 
 void ble_task_mem_free(void)
 {
-	free(scan_ap_num);
-	free(scan_flag);
-	free(scan_result);
-	free(print_temp);
+//	free(scan_ap_num);
+//	free(scan_flag);
+//	free(scan_result);
+//	free(print_temp);
 //	free(wifi_scan_config);
 }
 
