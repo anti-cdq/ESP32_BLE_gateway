@@ -33,22 +33,22 @@
 #include "ble_task.h"
 
 #define GATTC_TAG "GATTC_DEMO"
-#define REMOTE_SERVICE_UUID        0x00FF
-#define REMOTE_NOTIFY_CHAR_UUID    0xFF01
-#define PROFILE_NUM      1
-#define PROFILE_A_APP_ID 0
-#define INVALID_HANDLE   0
+#define REMOTE_SERVICE_UUID				0x00FF
+#define REMOTE_NOTIFY_CHAR_UUID			0xFF01
+#define PROFILE_NUM						1
+#define PROFILE_A_APP_ID				0
+#define INVALID_HANDLE					0
 
 
 //the unit of the duration is second
-#define SCAN_DURATION_SEC			2
-#define SCAN_DEV_NODE_NUM			100
+#define SCAN_DURATION_SEC				2
+#define SCAN_DEV_NODE_NUM				100
 
 scan_rst_node_t scan_result_nodes[SCAN_DEV_NODE_NUM];
 uint32_t scanned_dev_num = 0;
 uint32_t nodes_index = 0;
 
-static const char remote_device_name[] = "ESP_GATTS_DEMO";
+//static const char remote_device_name[] = "ESP_GATTS_DEMO";
 static bool connect    = false;
 static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
@@ -521,11 +521,22 @@ void ble_scan_result_print(void)
 			LCD_ShowString(8, 16*i+16, (const uint8_t *)print_temp);
 		}
 	}
+	if(i<=14)
+	{
+		LCD_Fill(0, 16*i+16, 239, 239, BLACK);
+	}
 }
 
 
 void ble_task_mem_free(void)
 {
+	ESP_ERROR_CHECK(esp_ble_gap_stop_scanning());
+	ESP_ERROR_CHECK(esp_bluedroid_disable());
+	ESP_ERROR_CHECK(esp_bluedroid_deinit());
+	ESP_ERROR_CHECK(esp_bt_controller_disable());
+	ESP_ERROR_CHECK(esp_bt_controller_deinit());
+//	ESP_ERROR_CHECK(esp_bt_mem_release(ESP_BT_MODE_BTDM));
+
 //	free(scan_ap_num);
 //	free(scan_flag);
 //	free(scan_result);
@@ -540,7 +551,7 @@ void ble_task(void *pvParameter)
 
 	ble_scan_result_init();
 
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+//    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
@@ -597,7 +608,7 @@ void ble_task(void *pvParameter)
 		led_on();
 		ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
 		ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
-		xEventGroupSetBits(ble_event_group, LCD_BLE_UPDATE_BIT);
+		xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
 		scanned_dev_num = 0;
 		esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
 	}

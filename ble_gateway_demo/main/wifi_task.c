@@ -206,7 +206,7 @@ void wifi_task(void *pvParameter)
     	if(*scan_flag == 1)
     	{
 			ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(scan_ap_num, scan_result));
-			xEventGroupSetBits(ble_event_group, LCD_WIFI_UPDATE_BIT);
+			xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
 			*scan_flag = 0;
     	}
     	vTaskDelay(100 / portTICK_PERIOD_MS);

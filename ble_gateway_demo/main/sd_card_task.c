@@ -55,6 +55,17 @@ void scan_files(char* path)
 }
 
 
+void sd_card_task_mem_free(void)
+{
+
+//	free(scan_ap_num);
+//	free(scan_flag);
+//	free(scan_result);
+//	free(print_temp);
+//	free(wifi_scan_config);
+}
+
+
 void sd_card_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "Initializing SD card");
