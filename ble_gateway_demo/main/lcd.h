@@ -65,6 +65,9 @@ extern  uint16_t BACK_COLOR, POINT_COLOR;   //背景色，画笔色
 
 void lcd_init(void);
 void LCD_Clear(uint16_t color);
+void lcd_write_data(const uint8_t *data, int len);
+void LCD_WR_DATA(uint16_t value);
+void Address_set(unsigned int x1,unsigned int y1,unsigned int x2,unsigned int y2);
 void LCD_DrawPoint(uint16_t x,uint16_t y);//画点
 void LCD_DrawPoint_big(uint16_t x,uint16_t y);//画一个大点
 void Draw_Circle(uint16_t x0,uint16_t y0,uint8_t r);

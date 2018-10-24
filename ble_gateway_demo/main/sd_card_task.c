@@ -18,6 +18,12 @@
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+
+#include "lcd.h"
+#include "global_config.h"
 
 static const char *TAG = "example";
 
@@ -42,14 +48,109 @@ static const char *TAG = "example";
 #endif //USE_SPI_MODE
 
 
+char file_path[50];
+uint8_t Buff[1024];
+uint8_t buff_to_lcd[LCD_W*2];
+
+
+void show_bmp_center(char* path)
+{
+	uint16_t x1=0, y1=0, x2=LCD_W, y2=LCD_H;		//图片显示区域
+	uint16_t offset_width = 0, offset_height = 0;
+	uint16_t image_width = 0, image_height = 0;
+	uint16_t x = 0, y = 0;
+	uint32_t temp = 0;
+
+	memset(buff_to_lcd, 0, LCD_W*2);
+	LCD_Clear(BLACK);
+
+	FILE *f = fopen(path, "r");
+	if (f == NULL)
+	{
+		ESP_LOGE(TAG, "Failed to open file for reading");
+		return;
+	}
+	fgets((char *)Buff, 54, f);
+
+	image_width = (uint16_t)Buff[19]<<8 | (uint16_t)Buff[18];	//获取图片宽度信息
+	image_height = (uint16_t)Buff[23]<<8 | (uint16_t)Buff[22];	//获取图片高度信息
+
+	if(image_width < LCD_W)				//要显示的图片宽度小于LCD宽度，则居中显示
+	{
+		x1 = (LCD_W - image_width)/2;	//显示开始的横坐标
+		x2 = x1 + image_width;			//显示结束的横坐标
+	}
+	else
+	{
+		offset_width = (image_width - LCD_W)/2;
+	}
+
+	if(image_height < LCD_H)
+	{
+		y1 = (LCD_H - image_height)/2;
+		y2 = y1 + image_height;
+	}
+	else
+	{
+		offset_height = (image_height - LCD_H)/2;
+	}
+
+	temp = 54 + (image_width*3+image_width%4)*(image_height-1) - image_width*3*offset_height + 3*offset_width;	//计算将要显示的第一行第一个像素的位置
+	fseek (f, temp, SEEK_SET);
+
+	Address_set(x1, y1, x2-1, y2-1);	//设置快速填充窗口
+	for(y=y1;y<y2;y++)
+	{
+		fgets((char *)Buff, image_width*3, f);
+		for(x=0;x<image_width;x++)
+		{
+			buff_to_lcd[x*2] = (Buff[x*3+2] & 0xF8) | (Buff[x*3+1]>>5);
+			buff_to_lcd[x*2+1] = ((Buff[x*3+1] & 0x1C)<<3) | (Buff[x*3]>>3);
+		}
+		lcd_write_data(buff_to_lcd, image_width*2);
+
+		temp = temp - 3*image_width - image_width%4;
+		fseek (f, temp, SEEK_SET);
+	}
+
+	fclose(f);
+}
+
+
+void show_bmp_info(char* path)
+{
+	uint16_t image_width = 0, image_height = 0;
+	uint8_t line[64];
+
+	FILE *f = fopen(path, "r");
+	if (f == NULL) {
+		ESP_LOGE(TAG, "Failed to open file for reading");
+		return;
+	}
+	fgets((char *)line, sizeof(line), f);
+	fclose(f);
+
+	image_width = (uint16_t)line[19]<<8 | (uint16_t)line[18];	//获取图片宽度信息
+	image_height = (uint16_t)line[23]<<8 | (uint16_t)line[22];	//获取图片高度信息
+
+	printf("size is: %d*%d\n", image_width, image_height);
+}
+
+
 void scan_files(char* path)
 {
 	DIR * dir;
 	struct dirent * ptr;
 	dir = opendir(path);
+
+	memset(file_path, 0, 50);
 	while((ptr = readdir(dir)) != NULL)
 	{
-		printf("d_name : %s\n", ptr->d_name);
+		printf("d_name : %s ", ptr->d_name);
+		sprintf(file_path, "%.*s%.*s%.*s", strlen(path),path,strlen("/"), "/", strlen(ptr->d_name), ptr->d_name);
+		show_bmp_info(file_path);
+		xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 	closedir(dir);
 }
@@ -63,6 +164,12 @@ void sd_card_task_mem_free(void)
 //	free(scan_result);
 //	free(print_temp);
 //	free(wifi_scan_config);
+}
+
+
+void sd_card_info_display(void)
+{
+	show_bmp_center(file_path);
 }
 
 
@@ -133,7 +240,7 @@ void sd_card_task(void *pvParameter)
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
 
-    scan_files("/sdcard/123");
+    scan_files("/sdcard/beauty");
 
     // Use POSIX and C standard library functions to work with files.
     // First create a file.
@@ -181,5 +288,10 @@ void sd_card_task(void *pvParameter)
     // All done, unmount partition and disable SDMMC or SPI peripheral
     esp_vfs_fat_sdmmc_unmount();
     ESP_LOGI(TAG, "Card unmounted");
+
+    while(1)
+    {
+    	vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
 }
 

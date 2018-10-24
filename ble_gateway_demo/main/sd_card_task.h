@@ -10,6 +10,7 @@
 
 
 void sd_card_task_mem_free(void);
+void sd_card_info_display(void);
 void sd_card_task(void *pvParameter);
 
 

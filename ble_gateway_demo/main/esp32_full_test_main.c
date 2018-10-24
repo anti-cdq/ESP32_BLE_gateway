@@ -32,7 +32,7 @@
 #define TASK_BLE_INDEX				1
 #define TASK_SD_CARD_INDEX			2
 
-#define TASK_MAX_INDEX				3
+#define TASK_MAX_INDEX				2
 
 /************ global variables ************/
 const int SCAN_RESULT_BIT = BIT0;				//定义事件，占用事件变量的第0位，最多可以定义32个事件。
@@ -59,12 +59,12 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 {
 	if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running)
+		if(is_task_running == false)
 			task_index--;
 	}
 	if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running)
+		if(is_task_running == false)
 			task_index++;
 	}
 	if(button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
@@ -77,7 +77,8 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 	}
 	if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
 	{
-		xEventGroupSetBits(ble_event_group, SELECTED_TASK_STOP_BIT);
+		if(is_task_running == true)
+			xEventGroupSetBits(ble_event_group, SELECTED_TASK_STOP_BIT);
 	}
 	if(button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_UP)
 	{
@@ -85,7 +86,8 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 	}
 	if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
 	{
-		xEventGroupSetBits(ble_event_group, SELECTED_TASK_START_BIT);
+		if(is_task_running == false)
+			xEventGroupSetBits(ble_event_group, SELECTED_TASK_START_BIT);
 	}
 
 
@@ -114,6 +116,10 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 
 	}
 
+	if(task_index < 0)
+		task_index = TASK_MAX_INDEX;
+	if(task_index > TASK_MAX_INDEX)
+		task_index = 0;
 }
 
 
@@ -161,8 +167,20 @@ void app_main()
 		event_bits = xEventGroupWaitBits(ble_event_group,
 				LCD_DISPLAY_UPDATE_BIT  |
 				SELECTED_TASK_START_BIT |
-				SELECTED_TASK_STOP_BIT, 0, 0, portMAX_DELAY);
+				SELECTED_TASK_STOP_BIT, 0, 0, 10/portTICK_PERIOD_MS);
 
+		if(is_task_running == false)
+		{
+			for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
+			{
+				LCD_ShowString(50, i*20+30, &task_name[i][0]);
+			}
+			for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
+			{
+				LCD_ShowString(35, i*20+30, (const uint8_t *)" ");
+			}
+			LCD_ShowString(35, task_index*20+30, (const uint8_t *)">");
+		}
 		if(event_bits & LCD_DISPLAY_UPDATE_BIT)
 		{
 			if(is_task_running == true)
@@ -180,23 +198,16 @@ void app_main()
 						led_off();
 						break;
 					case TASK_SD_CARD_INDEX:
-					    xTaskCreate(sd_card_task, "sd_card_task", configMINIMAL_STACK_SIZE, &task_temp_params, 12, &task_temp_handle);
+						sd_card_info_display();
 						break;
 					default:
 						break;
 			    }
 			}
-			else
-			{
-				for(uint8_t i=0;i<TASK_MAX_INDEX;i++)
-				{
-					LCD_ShowString(50, i*20+30, &task_name[i][0]);
-				}
-			}
 			xEventGroupClearBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
 		}
 
-		if((event_bits & SELECTED_TASK_START_BIT) && is_task_running == false)
+		if(event_bits & SELECTED_TASK_START_BIT)
 		{
 			is_task_running = true;
 		    switch(task_index)
@@ -208,7 +219,7 @@ void app_main()
 				    xTaskCreate(ble_task, "ble_task", 2048, &task_temp_params, 13, &task_temp_handle);
 					break;
 				case TASK_SD_CARD_INDEX:
-				    xTaskCreate(sd_card_task, "sd_card_task", configMINIMAL_STACK_SIZE, &task_temp_params, 12, &task_temp_handle);
+				    xTaskCreate(sd_card_task, "sd_card_task", 4096, &task_temp_params, 12, &task_temp_handle);
 					break;
 				default:
 					break;
@@ -216,7 +227,7 @@ void app_main()
 			xEventGroupClearBits(ble_event_group, SELECTED_TASK_START_BIT);
 		}
 
-		if((event_bits & SELECTED_TASK_STOP_BIT) && is_task_running == true)
+		if(event_bits & SELECTED_TASK_STOP_BIT)
 		{
 		    switch(task_index)
 		    {
@@ -236,6 +247,7 @@ void app_main()
 			vTaskDelete(task_temp_handle);
 			xEventGroupClearBits(ble_event_group, SELECTED_TASK_STOP_BIT);
 			is_task_running = false;
+			LCD_Clear(BLACK);
 		}
 	}
 }

@@ -136,6 +136,11 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
 }
 
 
+void lcd_write_data(const uint8_t *data, int len)
+{
+	lcd_data(spi, data, len);
+}
+
 //Initialize the display
 void lcd_init(void)
 {
