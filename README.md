@@ -16,7 +16,7 @@ Brief Introduction be edit later.
     * BOOT
 * 1* LED (GPIO21)
 * Micro SD card
-* 2* DAC£¨GPIO25&GPIO26, connect to PAM8403 to drive two speakers)
+* 2* DAC (GPIO25&GPIO26, connect to PAM8403 to drive two speakers)
 * QMC5883L (3-axis Magnetic Sensor)(IIC_SCL/GPIO17, IIC_SDA/)
 * MPU6050 (6-axis motion tracking devices)
 * UART -> CP2104 -> Micro USB (TXD0/GPIO1, RXD0/GPIO3)

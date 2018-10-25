@@ -23,16 +23,8 @@
 #include "lcd.h"
 #include "led_control.h"
 #include "button.h"
-#include "ble_task.h"
-#include "wifi_task.h"
-#include "sd_card_task.h"
+#include "multi_task_management.h"
 
-
-#define TASK_WIFI_INDEX				0
-#define TASK_BLE_INDEX				1
-#define TASK_SD_CARD_INDEX			2
-
-#define TASK_MAX_INDEX				2
 
 /************ global variables ************/
 const int SCAN_RESULT_BIT = BIT0;				//定义事件，占用事件变量的第0位，最多可以定义32个事件。
@@ -46,7 +38,7 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 
 /************ local variables ************/
 static int8_t task_index = TASK_WIFI_INDEX;
-static int8_t is_task_running = false;
+static int8_t user_task_status = USER_TASK_NOT_RUNNING;
 const uint8_t task_name[3][10] =
 {
 		{"WIFI"},
@@ -59,61 +51,31 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 {
 	if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running == false)
+		if(user_task_status == USER_TASK_NOT_RUNNING)
 			task_index--;
 	}
 	if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running == false)
+		if(user_task_status == USER_TASK_NOT_RUNNING)
 			task_index++;
 	}
-	if(button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
-	{
 
-	}
-	if(button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
-	{
-
-	}
 	if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running == true)
+		if(user_task_status == USER_TASK_RUNNING)
+		{
+			user_task_status = USER_TASK_DELETING;
 			xEventGroupSetBits(ble_event_group, SELECTED_TASK_STOP_BIT);
+		}
 	}
-	if(button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_UP)
-	{
 
-	}
 	if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
 	{
-		if(is_task_running == false)
+		if(user_task_status == USER_TASK_NOT_RUNNING)
+		{
+			user_task_status = USER_TASK_STARTING;
 			xEventGroupSetBits(ble_event_group, SELECTED_TASK_START_BIT);
-	}
-
-
-	if(button_evt[BUTTON_UP] == BUTTON_EVT_HOLD_DOWN)
-	{
-
-	}
-	if(button_evt[BUTTON_DOWN] == BUTTON_EVT_HOLD_DOWN)
-	{
-
-	}
-	if(button_evt[BUTTON_LEFT] == BUTTON_EVT_HOLD_DOWN)
-	{
-
-	}
-	if(button_evt[BUTTON_RIGHT] == BUTTON_EVT_HOLD_DOWN)
-	{
-
-	}
-	if(button_evt[BUTTON_BACK] == BUTTON_EVT_HOLD_DOWN)
-	{
-
-	}
-	if(button_evt[BUTTON_BOOT] == BUTTON_EVT_HOLD_DOWN)
-	{
-
+		}
 	}
 
 	if(task_index < 0)
@@ -140,8 +102,6 @@ void app_main()
 	uint32_t event_bits;
 	char print_temp[30];
 	esp_err_t ret;
-	uint32_t task_temp_params;
-	TaskHandle_t task_temp_handle;
 
 	uart_set_baudrate(UART_NUM_0, 115200);
 	led_init();
@@ -157,7 +117,7 @@ void app_main()
     }
     ESP_ERROR_CHECK( ret );
 
-    ble_event_group = xEventGroupCreate();    //创建一个事件标志组
+    ble_event_group = xEventGroupCreate();		//创建一个事件标志组
 
     xTaskCreate(button_task, "button_task", configMINIMAL_STACK_SIZE, NULL, 14, NULL);
     xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
@@ -169,7 +129,7 @@ void app_main()
 				SELECTED_TASK_START_BIT |
 				SELECTED_TASK_STOP_BIT, 0, 0, 10/portTICK_PERIOD_MS);
 
-		if(is_task_running == false)
+		if(user_task_status == false)
 		{
 			for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
 			{
@@ -183,71 +143,23 @@ void app_main()
 		}
 		if(event_bits & LCD_DISPLAY_UPDATE_BIT)
 		{
-			if(is_task_running == true)
-			{
-			    switch(task_index)
-			    {
-					case TASK_WIFI_INDEX:
-						wifi_scan_result_print();
-						break;
-					case TASK_BLE_INDEX:
-						sprintf(print_temp, "%d devices scanned:", nodes_index);
-						LCD_ShowString(0, 0, (const uint8_t *)print_temp);
-						ble_scan_result_print();
-						ble_scan_result_init();
-						led_off();
-						break;
-					case TASK_SD_CARD_INDEX:
-						sd_card_info_display();
-						break;
-					default:
-						break;
-			    }
-			}
+			user_task_lcd_dispaly(task_index);
 			xEventGroupClearBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
 		}
 
 		if(event_bits & SELECTED_TASK_START_BIT)
 		{
-			is_task_running = true;
-		    switch(task_index)
-		    {
-				case TASK_WIFI_INDEX:
-				    xTaskCreate(wifi_task, "wifi_task", 2048, &task_temp_params, 14, &task_temp_handle);
-					break;
-				case TASK_BLE_INDEX:
-				    xTaskCreate(ble_task, "ble_task", 2048, &task_temp_params, 13, &task_temp_handle);
-					break;
-				case TASK_SD_CARD_INDEX:
-				    xTaskCreate(sd_card_task, "sd_card_task", 4096, &task_temp_params, 12, &task_temp_handle);
-					break;
-				default:
-					break;
-		    }
+			user_task_enable(task_index);
 			xEventGroupClearBits(ble_event_group, SELECTED_TASK_START_BIT);
+			user_task_status = USER_TASK_RUNNING;
 		}
 
 		if(event_bits & SELECTED_TASK_STOP_BIT)
 		{
-		    switch(task_index)
-		    {
-				case TASK_WIFI_INDEX:
-					wifi_task_mem_free();
-					break;
-				case TASK_BLE_INDEX:
-					ble_task_mem_free();
-					break;
-				case TASK_SD_CARD_INDEX:
-					sd_card_task_mem_free();
-					break;
-				default:
-					break;
-		    }
-
-			vTaskDelete(task_temp_handle);
+			user_task_disable(task_index);
 			xEventGroupClearBits(ble_event_group, SELECTED_TASK_STOP_BIT);
-			is_task_running = false;
 			LCD_Clear(BLACK);
+			user_task_status = USER_TASK_NOT_RUNNING;
 		}
 	}
 }
