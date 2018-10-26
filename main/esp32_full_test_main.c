@@ -31,6 +31,7 @@ const int LCD_DISPLAY_UPDATE_BIT = BIT1;
 const int SELECTED_TASK_START_BIT = BIT2;
 const int SELECTED_TASK_STOP_BIT = BIT3;
 
+xQueueHandle  button_evt_queue;
 EventGroupHandle_t ble_event_group;	//定义一个事件的句柄
 portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 
@@ -42,6 +43,37 @@ static int8_t user_task_status = USER_TASK_NOT_RUNNING;
 
 void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 {
+	uint8_t i;
+
+	for(i=0;i<BUTTON_NUM;i++)
+	{
+		if(button_evt[i])
+		{
+			xQueueSend(button_evt_queue, button_evt, NULL);
+			return;
+		}
+	}
+}
+
+
+void button_task(void *pvParameter)
+{
+    button_init(user_button_evt_handler);
+
+    while(1)
+    {
+    	button_detect();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+
+void app_main_button_recieve(void)
+{
+	uint8_t button_evt[BUTTON_NUM];
+
+	xQueueReceive(button_evt_queue, button_evt, 5/portTICK_PERIOD_MS);
+
 	if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 	{
 		if(user_task_status == USER_TASK_NOT_RUNNING)
@@ -78,18 +110,6 @@ void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
 }
 
 
-void button_task(void *pvParameter)
-{
-    button_init(user_button_evt_handler);
-
-    while(1)
-    {
-    	button_detect();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-}
-
-
 void app_main()
 {
 	uint32_t event_bits;
@@ -109,6 +129,7 @@ void app_main()
     }
     ESP_ERROR_CHECK( ret );
 
+    button_evt_queue = xQueueCreate(10, BUTTON_NUM);
     ble_event_group = xEventGroupCreate();		//创建一个事件标志组
     xTaskCreate(button_task, "button_task", configMINIMAL_STACK_SIZE, NULL, 14, NULL);
 
@@ -117,10 +138,11 @@ void app_main()
 		event_bits = xEventGroupWaitBits(ble_event_group,
 				LCD_DISPLAY_UPDATE_BIT  |
 				SELECTED_TASK_START_BIT |
-				SELECTED_TASK_STOP_BIT, 0, 0, 10/portTICK_PERIOD_MS);
+				SELECTED_TASK_STOP_BIT, 0, 0, 5/portTICK_PERIOD_MS);
 
 		if(user_task_status == USER_TASK_NOT_RUNNING)
 		{
+			app_main_button_recieve();
 			main_page_display(task_index);
 		}
 
