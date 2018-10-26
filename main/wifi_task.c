@@ -86,7 +86,7 @@
 
 
 #define MAX_WIFI_NUM			20
-static const char *TAG = "scan";
+static const char *TAG = "WIFI TASK";
 static uint8_t preinit_flag = 0;
 
 uint16_t *scan_ap_num = NULL;

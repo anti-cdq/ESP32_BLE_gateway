@@ -14,8 +14,34 @@
 #include "wifi_task.h"
 #include "sd_card_task.h"
 
+#include "global_config.h"
+#include "lcd.h"
+#include "led_control.h"
+#include "button.h"
+
+
 TaskHandle_t task_temp_handle;
 uint32_t task_temp_params;
+const uint8_t task_name[3][10] =
+{
+		{"WIFI"},
+		{"BLE"},
+		{"SD_CARD"},
+};
+
+
+void main_page_display(uint8_t task_index)
+{
+	for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
+	{
+		LCD_ShowString(50, i*20+30, &task_name[i][0]);
+	}
+	for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
+	{
+		LCD_ShowString(35, i*20+30, (const uint8_t *)" ");
+	}
+	LCD_ShowString(35, task_index*20+30, (const uint8_t *)">");
+}
 
 
 void user_task_enable(uint8_t task_index)
@@ -60,6 +86,8 @@ void user_task_disable(uint8_t task_index)
 
 void user_task_lcd_dispaly(uint8_t task_index)
 {
+	char print_temp[30];
+
 	switch(task_index)
 	{
 		case TASK_WIFI_INDEX:

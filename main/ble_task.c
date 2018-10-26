@@ -32,7 +32,10 @@
 #include "global_config.h"
 #include "ble_task.h"
 
-#define GATTC_TAG "GATTC_DEMO"
+
+
+#define GATTC_TAG						"BLE TASK"
+
 #define REMOTE_SERVICE_UUID				0x00FF
 #define REMOTE_NOTIFY_CHAR_UUID			0xFF01
 #define PROFILE_NUM						1

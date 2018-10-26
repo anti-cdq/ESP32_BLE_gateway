@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -39,12 +38,6 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 /************ local variables ************/
 static int8_t task_index = TASK_WIFI_INDEX;
 static int8_t user_task_status = USER_TASK_NOT_RUNNING;
-const uint8_t task_name[3][10] =
-{
-		{"WIFI"},
-		{"BLE"},
-		{"SD_CARD"},
-};
 
 
 void user_button_evt_handler(uint8_t button_evt[BUTTON_NUM])
@@ -100,7 +93,6 @@ void button_task(void *pvParameter)
 void app_main()
 {
 	uint32_t event_bits;
-	char print_temp[30];
 	esp_err_t ret;
 
 	uart_set_baudrate(UART_NUM_0, 115200);
@@ -118,9 +110,7 @@ void app_main()
     ESP_ERROR_CHECK( ret );
 
     ble_event_group = xEventGroupCreate();		//创建一个事件标志组
-
     xTaskCreate(button_task, "button_task", configMINIMAL_STACK_SIZE, NULL, 14, NULL);
-    xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
 
 	while(1)
 	{
@@ -129,18 +119,11 @@ void app_main()
 				SELECTED_TASK_START_BIT |
 				SELECTED_TASK_STOP_BIT, 0, 0, 10/portTICK_PERIOD_MS);
 
-		if(user_task_status == false)
+		if(user_task_status == USER_TASK_NOT_RUNNING)
 		{
-			for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
-			{
-				LCD_ShowString(50, i*20+30, &task_name[i][0]);
-			}
-			for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
-			{
-				LCD_ShowString(35, i*20+30, (const uint8_t *)" ");
-			}
-			LCD_ShowString(35, task_index*20+30, (const uint8_t *)">");
+			main_page_display(task_index);
 		}
+
 		if(event_bits & LCD_DISPLAY_UPDATE_BIT)
 		{
 			user_task_lcd_dispaly(task_index);
