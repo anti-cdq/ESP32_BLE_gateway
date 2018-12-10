@@ -68,48 +68,6 @@ void button_task(void *pvParameter)
 }
 
 
-void app_main_button_recieve(void)
-{
-	uint8_t button_evt[BUTTON_NUM];
-
-	xQueueReceive(button_evt_queue, button_evt, 5/portTICK_PERIOD_MS);
-
-	if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
-	{
-		if(user_task_status == USER_TASK_NOT_RUNNING)
-			task_index--;
-	}
-	if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
-	{
-		if(user_task_status == USER_TASK_NOT_RUNNING)
-			task_index++;
-	}
-
-	if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
-	{
-		if(user_task_status == USER_TASK_RUNNING)
-		{
-			user_task_status = USER_TASK_DELETING;
-			xEventGroupSetBits(ble_event_group, SELECTED_TASK_STOP_BIT);
-		}
-	}
-
-	if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
-	{
-		if(user_task_status == USER_TASK_NOT_RUNNING)
-		{
-			user_task_status = USER_TASK_STARTING;
-			xEventGroupSetBits(ble_event_group, SELECTED_TASK_START_BIT);
-		}
-	}
-
-	if(task_index < 0)
-		task_index = TASK_MAX_INDEX;
-	if(task_index > TASK_MAX_INDEX)
-		task_index = 0;
-}
-
-
 void app_main()
 {
 	uint32_t event_bits;
@@ -119,6 +77,7 @@ void app_main()
 	led_init();
 	lcd_init();
 	LCD_Clear(BLACK);
+	LCD_DrawRectangle(0, 0, 239, 239);
 
     // Initialize NVS.
     ret = nvs_flash_init();
@@ -139,33 +98,6 @@ void app_main()
 				LCD_DISPLAY_UPDATE_BIT  |
 				SELECTED_TASK_START_BIT |
 				SELECTED_TASK_STOP_BIT, 0, 0, 5/portTICK_PERIOD_MS);
-
-		if(user_task_status == USER_TASK_NOT_RUNNING)
-		{
-			app_main_button_recieve();
-			main_page_display(task_index);
-		}
-
-		if(event_bits & LCD_DISPLAY_UPDATE_BIT)
-		{
-			user_task_lcd_dispaly(task_index);
-			xEventGroupClearBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
-		}
-
-		if(event_bits & SELECTED_TASK_START_BIT)
-		{
-			user_task_enable(task_index);
-			xEventGroupClearBits(ble_event_group, SELECTED_TASK_START_BIT);
-			user_task_status = USER_TASK_RUNNING;
-		}
-
-		if(event_bits & SELECTED_TASK_STOP_BIT)
-		{
-			user_task_disable(task_index);
-			xEventGroupClearBits(ble_event_group, SELECTED_TASK_STOP_BIT);
-			LCD_Clear(BLACK);
-			user_task_status = USER_TASK_NOT_RUNNING;
-		}
 	}
 }
 

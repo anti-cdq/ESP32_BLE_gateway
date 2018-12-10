@@ -5,106 +5,100 @@
  *      Author: Linuxer
  */
 
+#include <stdio.h>
+#include <string.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
 #include "multi_task_management.h"
-#include "ble_task.h"
-#include "wifi_task.h"
-#include "sd_card_task.h"
 
 #include "global_config.h"
 #include "lcd.h"
-#include "led_control.h"
 #include "button.h"
 
+task_manager_t task_maneger;
 
-TaskHandle_t task_temp_handle;
-uint32_t task_temp_params;
-const uint8_t task_name[3][10] =
+
+void task_default(void *pvParameter)
 {
-		{"WIFI"},
-		{"BLE"},
-		{"SD_CARD"},
-};
+	uint8_t button_evt[BUTTON_NUM];
 
+	while(1)
+	{
+		if(xQueueReceive(button_evt_queue, button_evt, 5/portTICK_PERIOD_MS) == pdTRUE)
+		{
+			if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
+			{
+				task_maneger.task_index_c++;
+			}
 
-void main_page_display(uint8_t task_index)
-{
-	for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
-	{
-		LCD_ShowString(50, i*20+30, &task_name[i][0]);
+			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
+			{
+				task_maneger.task_index_c--;
+			}
+
+			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			{
+				xTaskCreate(task_maneger.task[task_maneger.task_index_c].task,
+							task_maneger.task[task_maneger.task_index_c].name,
+							task_maneger.task[task_maneger.task_index_c].usStackDepth,
+							&task_maneger.task_temp_params,
+							USER_TASK_DEFAULT_PRIORITY,
+							&task_maneger.task_temp_handle);
+			}
+
+			if(task_maneger.task_index_c > task_maneger.task_num)
+				task_maneger.task_index_c = task_maneger.task_num - 1;
+			if(task_maneger.task_index_c == task_maneger.task_num)
+				task_maneger.task_index_c = 0;
+		}
 	}
-	for(uint8_t i=0;i<=TASK_MAX_INDEX;i++)
-	{
-		LCD_ShowString(35, i*20+30, (const uint8_t *)" ");
-	}
-	LCD_ShowString(35, task_index*20+30, (const uint8_t *)">");
 }
 
 
-void user_task_enable(uint8_t task_index)
+void display_default(uint8_t task_index)
 {
-    switch(task_index)
-    {
-		case TASK_WIFI_INDEX:
-		    xTaskCreate(wifi_task, "wifi_task", 2048, &task_temp_params, 14, &task_temp_handle);
-			break;
-		case TASK_BLE_INDEX:
-		    xTaskCreate(ble_task, "ble_task", 2048, &task_temp_params, 13, &task_temp_handle);
-			break;
-		case TASK_SD_CARD_INDEX:
-		    xTaskCreate(sd_card_task, "sd_card_task", 4096, &task_temp_params, 12, &task_temp_handle);
-			break;
-		default:
-			break;
-    }
+	for(uint8_t i=0;i<=task_maneger.task_num;i++)
+	{
+		LCD_ShowString(	MAIN_PAGE_LINE_MARGIN,
+						i*MAIN_PAGE_LINE_SPACE+MAIN_PAGE_FIRST_LINE,
+						(const uint8_t *)task_maneger.task[i].name);
+	}
+
+	LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
+					task_maneger.task_index_p*MAIN_PAGE_LINE_SPACE + MAIN_PAGE_FIRST_LINE,
+					(const uint8_t *)" ");
+	LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
+					task_maneger.task_index_c*MAIN_PAGE_LINE_SPACE+MAIN_PAGE_FIRST_LINE,
+					(const uint8_t *)">");
+}
+
+
+uint8_t register_a_task(user_task_t *task_to_reg)
+{
+	if(task_maneger.task_num == MAX_TASK_NUM-1)
+		return 1;
+	if(task_to_reg == NULL)
+		return 2;
+
+	memcpy(task_to_reg, &(task_maneger.task[task_maneger.task_num]), sizeof(user_task_t));
+	task_maneger.task_num++;
+
+	return 0;
 }
 
 
 void user_task_disable(uint8_t task_index)
 {
-    switch(task_index)
-    {
-		case TASK_WIFI_INDEX:
-			wifi_task_mem_free();
-			break;
-		case TASK_BLE_INDEX:
-			ble_task_mem_free();
-			break;
-		case TASK_SD_CARD_INDEX:
-			sd_card_task_mem_free();
-			break;
-		default:
-			break;
-    }
-
-	vTaskDelete(task_temp_handle);
+	vTaskDelete(task_maneger.task_temp_handle);
+	task_maneger.task[task_maneger.task_index_c].memfree();
 }
 
 
 void user_task_lcd_dispaly(uint8_t task_index)
 {
-	char print_temp[30];
 
-	switch(task_index)
-	{
-		case TASK_WIFI_INDEX:
-			wifi_scan_result_print();
-			break;
-		case TASK_BLE_INDEX:
-			sprintf(print_temp, "%d devices scanned:", nodes_index);
-			LCD_ShowString(0, 0, (const uint8_t *)print_temp);
-			ble_scan_result_print();
-			ble_scan_result_init();
-			led_off();
-			break;
-		case TASK_SD_CARD_INDEX:
-			sd_card_info_display();
-			break;
-		default:
-			break;
-	}
 }
 
