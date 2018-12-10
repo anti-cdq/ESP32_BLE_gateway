@@ -18,7 +18,8 @@
 #include "lcd.h"
 #include "button.h"
 
-task_manager_t task_maneger;
+
+task_manager_t task_manager;
 
 
 void task_default(void *pvParameter)
@@ -27,78 +28,103 @@ void task_default(void *pvParameter)
 
 	while(1)
 	{
-		if(xQueueReceive(button_evt_queue, button_evt, 5/portTICK_PERIOD_MS) == pdTRUE)
+		if(xQueueReceive(button_evt_queue, button_evt, 50/portTICK_PERIOD_MS) == pdTRUE)
 		{
 			if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 			{
-				task_maneger.task_index_c++;
+				task_manager.task_index_c--;
 			}
 
 			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 			{
-				task_maneger.task_index_c--;
+				task_manager.task_index_c++;
 			}
 
 			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
 			{
-				xTaskCreate(task_maneger.task[task_maneger.task_index_c].task,
-							task_maneger.task[task_maneger.task_index_c].name,
-							task_maneger.task[task_maneger.task_index_c].usStackDepth,
-							&task_maneger.task_temp_params,
+				xTaskCreate(task_manager.task[task_manager.task_index_c].task,
+							task_manager.task[task_manager.task_index_c].name,
+							task_manager.task[task_manager.task_index_c].usStackDepth,
+							&task_manager.task_temp_params,
 							USER_TASK_DEFAULT_PRIORITY,
-							&task_maneger.task_temp_handle);
+							&task_manager.task_temp_handle);
 			}
 
-			if(task_maneger.task_index_c > task_maneger.task_num)
-				task_maneger.task_index_c = task_maneger.task_num - 1;
-			if(task_maneger.task_index_c == task_maneger.task_num)
-				task_maneger.task_index_c = 0;
+			if(task_manager.task_index_c > task_manager.task_num)
+				task_manager.task_index_c = task_manager.task_num - 1;
+			if(task_manager.task_index_c == task_manager.task_num)
+				task_manager.task_index_c = 0;
 		}
 	}
 }
 
 
-void display_default(uint8_t task_index)
+void display_default(void)
 {
-	for(uint8_t i=0;i<=task_maneger.task_num;i++)
+	for(uint8_t i=0;i<=task_manager.task_num;i++)
 	{
 		LCD_ShowString(	MAIN_PAGE_LINE_MARGIN,
 						i*MAIN_PAGE_LINE_SPACE+MAIN_PAGE_FIRST_LINE,
-						(const uint8_t *)task_maneger.task[i].name);
+						(const uint8_t *)task_manager.task[i].name);
 	}
 
-	LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
-					task_maneger.task_index_p*MAIN_PAGE_LINE_SPACE + MAIN_PAGE_FIRST_LINE,
-					(const uint8_t *)" ");
-	LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
-					task_maneger.task_index_c*MAIN_PAGE_LINE_SPACE+MAIN_PAGE_FIRST_LINE,
-					(const uint8_t *)">");
+	if(task_manager.task_index_c != task_manager.task_index_p)
+	{
+		LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
+						task_manager.task_index_p*MAIN_PAGE_LINE_SPACE + MAIN_PAGE_FIRST_LINE,
+						(const uint8_t *)" ");
+		LCD_ShowString(	MAIN_PAGE_CURSOR_SPACE,
+						task_manager.task_index_c*MAIN_PAGE_LINE_SPACE+MAIN_PAGE_FIRST_LINE,
+						(const uint8_t *)">");
+
+		task_manager.task_index_p = task_manager.task_index_c;
+	}
+}
+
+
+void task_manager_init(void)
+{
+	memset(&task_manager, 0, sizeof(task_manager_t));
+	task_manager.task_index_p = MAX_TASK_NUM - 1;
+
+	task_manager.default_task = task_default;
+	task_manager.dafault_display = display_default;
+
+	task_manager.current_task = task_manager.default_task;
+	task_manager.current_display = task_manager.dafault_display;
+
+    xTaskCreate(task_manager.default_task,
+    			"user_task",
+				configMINIMAL_STACK_SIZE,
+				NULL,
+				USER_TASK_DEFAULT_PRIORITY,
+				NULL);
 }
 
 
 uint8_t register_a_task(user_task_t *task_to_reg)
 {
-	if(task_maneger.task_num == MAX_TASK_NUM-1)
+	if(task_manager.task_num == MAX_TASK_NUM-1)
 		return 1;
 	if(task_to_reg == NULL)
 		return 2;
 
-	memcpy(task_to_reg, &(task_maneger.task[task_maneger.task_num]), sizeof(user_task_t));
-	task_maneger.task_num++;
+	memcpy(&task_manager.task[task_manager.task_num], task_to_reg, sizeof(user_task_t));
+	task_manager.task_num++;
 
 	return 0;
 }
 
 
-void user_task_disable(uint8_t task_index)
+void user_task_disable(void)
 {
-	vTaskDelete(task_maneger.task_temp_handle);
-	task_maneger.task[task_maneger.task_index_c].memfree();
+	vTaskDelete(task_manager.task_temp_handle);
+	task_manager.task[task_manager.task_index_c].memfree();
 }
 
 
-void user_task_lcd_dispaly(uint8_t task_index)
+void user_task_lcd_dispaly(void)
 {
-
+	task_manager.current_display();
 }
 
