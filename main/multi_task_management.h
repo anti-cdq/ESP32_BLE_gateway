@@ -38,8 +38,9 @@ typedef struct
 	uint8_t task_index_c;			/* current task index */
 	uint8_t task_index_p;			/* previours task index */
 	uint8_t task_status;			/* task status */
-	TaskHandle_t task_temp_handle;
-	uint32_t task_temp_params;
+	TaskHandle_t default_task_handle;
+	TaskHandle_t user_task_handle;
+	uint32_t user_task_params;
 	user_task_t	task[MAX_TASK_NUM];	/* previours task index */
 }task_manager_t;
 

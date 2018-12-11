@@ -38,13 +38,14 @@ char *all_file_name;
 char *file_path;
 uint8_t *Buff;
 uint8_t *buff_to_lcd;
-
+static uint8_t display_flag = 0;
 
 void show_bmp_center(char* path)
 {
 	uint16_t x1=0, y1=0, x2=LCD_W, y2=LCD_H;		//图片显示区域
 	uint16_t offset_width = 0, offset_height = 0;
 	uint16_t image_width = 0, image_height = 0;
+	uint16_t display_width = 0;
 	uint16_t x = 0, y = 0;
 	uint32_t temp = 0;
 
@@ -66,9 +67,11 @@ void show_bmp_center(char* path)
 	{
 		x1 = (LCD_W - image_width)/2;	//显示开始的横坐标
 		x2 = x1 + image_width;			//显示结束的横坐标
+		display_width = image_width;
 	}
 	else
 	{
+		display_width = LCD_W;
 		offset_width = (image_width - LCD_W)/2;
 	}
 
@@ -88,7 +91,7 @@ void show_bmp_center(char* path)
 	Address_set(x1, y1, x2-1, y2-1);	//设置快速填充窗口
 	for(y=y1;y<y2;y++)
 	{
-		fread((char *)Buff, image_width*3, 1, f);
+		fread((char *)Buff, display_width*3, 1, f);
 		for(x=0;x<image_width;x++)
 		{
 			buff_to_lcd[x*2] = (Buff[x*3+2] & 0xF8) | (Buff[x*3+1]>>5);
@@ -141,7 +144,7 @@ void scan_files(char* path)
 
 		sprintf(file_path, "%.*s%.*s%.*s", strlen(path),path,strlen("/"), "/", strlen(ptr->d_name), ptr->d_name);
 		show_bmp_info(file_path);
-		xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
+		display_flag = 1;
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 	closedir(dir);
@@ -163,7 +166,11 @@ void sd_card_task_mem_free(void)
 
 void sd_card_info_display(void)
 {
-	show_bmp_center(file_path);
+	if(display_flag)
+	{
+		show_bmp_center(file_path);
+		display_flag = 0;
+	}
 }
 
 
@@ -216,7 +223,7 @@ void sd_card_task(void *pvParameter)
 
     while(1)
     {
-    	vTaskDelay(10/portTICK_PERIOD_MS);
+    	vTaskDelay(20/portTICK_PERIOD_MS);
     }
 }
 

@@ -42,8 +42,8 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 user_task_t tasks[MAX_TASK_NUM] =
 {
 	{wifi_task, "wifi_task", 2048, wifi_scan_result_print,wifi_task_mem_free},
-	{ble_task, "ble_task", 2048, ble_task_mem_free, ble_scan_result_print},
-	{sd_card_task, "sd_card_task", 4096, sd_card_task_mem_free, sd_card_info_display},
+	{ble_task, "ble_task", 2048, ble_scan_result_print, ble_task_mem_free},
+	{sd_card_task, "sd_card_task", 4096, sd_card_info_display, sd_card_task_mem_free},
 };
 
 void app_main()
@@ -55,7 +55,6 @@ void app_main()
 	led_init();
 	lcd_init();
 	LCD_Clear(BLACK);
-	LCD_DrawRectangle(0, 0, 239, 239);
 
     // Initialize NVS.
     ret = nvs_flash_init();

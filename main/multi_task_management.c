@@ -45,9 +45,12 @@ void task_default(void *pvParameter)
 				xTaskCreate(task_manager.task[task_manager.task_index_c].task,
 							task_manager.task[task_manager.task_index_c].name,
 							task_manager.task[task_manager.task_index_c].usStackDepth,
-							&task_manager.task_temp_params,
+							&task_manager.user_task_params,
 							USER_TASK_DEFAULT_PRIORITY,
-							&task_manager.task_temp_handle);
+							&task_manager.user_task_handle);
+				task_manager.current_display = task_manager.task[task_manager.task_index_c].display;
+
+				vTaskSuspend(task_manager.default_task_handle);
 			}
 
 			if(task_manager.task_index_c > task_manager.task_num)
@@ -98,7 +101,7 @@ void task_manager_init(void)
 				configMINIMAL_STACK_SIZE,
 				NULL,
 				USER_TASK_DEFAULT_PRIORITY,
-				NULL);
+				&task_manager.default_task_handle);
 }
 
 
@@ -118,7 +121,7 @@ uint8_t register_a_task(user_task_t *task_to_reg)
 
 void user_task_disable(void)
 {
-	vTaskDelete(task_manager.task_temp_handle);
+	vTaskDelete(task_manager.user_task_handle);
 	task_manager.task[task_manager.task_index_c].memfree();
 }
 

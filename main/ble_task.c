@@ -56,6 +56,7 @@ static bool connect    = false;
 static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
+static uint8_t display_flag = 0;
 
 /* eclare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -488,6 +489,11 @@ void ble_scan_result_print(void)
 	uint8_t i, j, k;
 	uint8_t result_print_queue[nodes_index];
 
+	if(display_flag == 0)
+		return;
+	sprintf(print_temp, "%d devices scanned:", nodes_index);
+	LCD_ShowString(0, 0, (const uint8_t *)print_temp);
+
 	for(i=0;i<nodes_index;i++)
 		result_print_queue[i] = 0xFF;
 	result_print_queue[0] = 0;
@@ -528,6 +534,10 @@ void ble_scan_result_print(void)
 	{
 		LCD_Fill(0, 16*i+16, 239, 239, BLACK);
 	}
+
+	ble_scan_result_init();
+	led_off();
+	display_flag = 0;
 }
 
 
@@ -611,7 +621,8 @@ void ble_task(void *pvParameter)
 		led_on();
 		ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
 		ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
-		xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
+
+		display_flag = 1;
 		scanned_dev_num = 0;
 		esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
 	}

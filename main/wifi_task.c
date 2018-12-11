@@ -89,11 +89,11 @@
 static const char *TAG = "WIFI TASK";
 static uint8_t preinit_flag = 0;
 
+static uint8_t display_flag = 0;
 uint16_t *scan_ap_num = NULL;
 volatile uint8_t *scan_flag = NULL;
 wifi_ap_record_t *scan_result = NULL;
 char *print_temp = NULL;
-//wifi_scan_config_t *wifi_scan_config = NULL;
 wifi_scan_config_t wifi_scan_config =
 {
 	.ssid = NULL,
@@ -133,6 +133,8 @@ void wifi_scan_result_print(void)
 {
 	uint16_t i;
 
+	if(display_flag == 0)
+		return;
 	sprintf(print_temp, "Scan done.%d AP scanned:", *scan_ap_num);
 	LCD_ShowString(0, 0, (const uint8_t *)print_temp);
 
@@ -160,6 +162,7 @@ void wifi_scan_result_print(void)
 	}
 	ESP_ERROR_CHECK(esp_wifi_scan_start(&wifi_scan_config, 0));
 	printf("Scanning...\n");
+	display_flag = 0;
 }
 
 
@@ -206,7 +209,7 @@ void wifi_task(void *pvParameter)
     	if(*scan_flag == 1)
     	{
 			ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(scan_ap_num, scan_result));
-			xEventGroupSetBits(ble_event_group, LCD_DISPLAY_UPDATE_BIT);
+			display_flag = 1;
 			*scan_flag = 0;
     	}
     	vTaskDelay(100 / portTICK_PERIOD_MS);
