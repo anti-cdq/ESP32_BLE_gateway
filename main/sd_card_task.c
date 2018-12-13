@@ -31,7 +31,6 @@ static const char *TAG = "SD CARD";
 
 #define FILE_PATH_LEN			50
 #define FILE_NUM_PER_PAGE		10
-#define FILE_NAME_LEN			30
 #define FILE_BUFF_LEN			1024
 #define LCD_BUFF_LEN			(LCD_W*2)
 
@@ -40,11 +39,12 @@ typedef struct
 	uint8_t display_flag;
 	uint8_t status;
 	uint32_t file_num;
-	uint32_t file_index;
+	uint32_t file_index_p;
+	uint32_t file_index_c;
 	uint8_t	Buff[LCD_W*3];
 	uint8_t buff_to_lcd[LCD_BUFF_LEN];
-	char file_path[FILE_PATH_LEN];
-	char all_file_name[FILE_NUM_PER_PAGE][FILE_NAME_LEN];
+	char current_path[FILE_PATH_LEN];
+	char all_file_name[FILE_NUM_PER_PAGE][FILE_PATH_LEN];
 }file_browser_s;
 
 file_browser_s *file_browser;
@@ -139,30 +139,48 @@ void show_bmp_info(char* path)
 }
 
 
-void scan_files(char* path)
+uint32_t get_file_num(char* path)
 {
 	DIR * dir;
 	struct dirent * ptr;
 	dir = opendir(path);
+	uint32_t file_num = 0;
 
-	memset(file_browser->file_path, 0, FILE_PATH_LEN);
 	while((ptr = readdir(dir)) != NULL)
 	{
-		printf("d_name : %s ", ptr->d_name);
-		printf("d_ino: %d ", ptr->d_ino);
-		printf("d_type: %d ", ptr->d_type);
-		printf("dd_vfs_idx: %d ", dir->dd_vfs_idx);
-		printf("dd_rsv: %d ", dir->dd_rsv);
+		file_num++;
+	}
+	closedir(dir);
+	return file_num;
+}
 
-		sprintf(file_browser->file_path,
-				"%.*s%.*s%.*s",
-				strlen(path),
-				path,strlen("/"), "/",
-				strlen(ptr->d_name),
-				ptr->d_name);
-		show_bmp_info(file_browser->file_path);
-		file_browser->display_flag = 1;
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+void get_file_name(char* path, uint32_t start_index)
+{
+	DIR * dir;
+	struct dirent * ptr;
+	dir = opendir(path);
+	uint32_t file_index = 0;
+	char temp_path[FILE_PATH_LEN];
+
+	memset(temp_path, 0, FILE_PATH_LEN);
+	while((ptr = readdir(dir)) != NULL)
+	{
+		file_index++;
+		if(file_index >= start_index+FILE_NUM_PER_PAGE)
+			break;
+		if(file_index >= start_index)
+		{
+			sprintf(temp_path,
+					"%.*s%.*s%.*s",
+					strlen(path),
+					path,strlen("/"), "/",
+					strlen(ptr->d_name),
+					ptr->d_name);
+			memcpy(	file_browser->all_file_name[file_index-start_index],
+					temp_path,
+					FILE_PATH_LEN);
+		}
 	}
 	closedir(dir);
 }
@@ -181,10 +199,34 @@ void sd_card_task_mem_free(void)
 
 void sd_card_info_display(void)
 {
+	uint32_t i = 0;
+
 	if(file_browser->display_flag == 1)
 	{
-		show_bmp_center(file_browser->file_path, 0, 0);
+		show_bmp_center(file_browser->current_path, 0, 0);
+	}
+	else if(file_browser->display_flag == 2)
+	{
+		LCD_Clear(BLACK);
+		for(i=0;i<FILE_NUM_PER_PAGE;i++)
+		{
+			printf("%s \n", file_browser->all_file_name[i]);
+			LCD_ShowString(30, i*18+18, (const uint8_t *)file_browser->all_file_name[i]);
+		}
 		file_browser->display_flag = 0;
+	}
+
+	if(file_browser->file_index_c != file_browser->file_index_p)
+	{
+		printf("%d \n", file_browser->file_index_c);
+		LCD_ShowString(	15,
+						(file_browser->file_index_p%FILE_NUM_PER_PAGE)*18 + 18,
+						(const uint8_t *)" ");
+		LCD_ShowString(	15,
+						(file_browser->file_index_c%FILE_NUM_PER_PAGE)*18+18,
+						(const uint8_t *)">");
+
+		file_browser->file_index_p = file_browser->file_index_c;
 	}
 }
 
@@ -200,6 +242,10 @@ void sd_card_task(void *pvParameter)
     button_evt = (uint8_t *)malloc(BUTTON_NUM);
 
 	memset(file_browser, 0, sizeof(file_browser_s));
+	memcpy(file_browser->current_path, "/sdcard", FILE_PATH_LEN);
+	file_browser->display_flag = 0;
+	file_browser->file_index_p = 1;
+	file_browser->file_index_c = 0;
 
 	gpio_set_pull_mode(15, GPIO_PULLUP_ONLY);   // CMD, needed in 4- and 1- line modes
     gpio_set_pull_mode(2, GPIO_PULLUP_ONLY);    // D0, needed in 4- and 1-line modes
@@ -234,7 +280,9 @@ void sd_card_task(void *pvParameter)
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
-    scan_files("/sdcard/all");
+    file_browser->file_num = get_file_num(file_browser->current_path);
+    get_file_name(file_browser->current_path, 1);
+	file_browser->display_flag = 2;
 
     while(1)
     {
@@ -242,15 +290,12 @@ void sd_card_task(void *pvParameter)
 		{
 			if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 			{
+				file_browser->file_index_c--;
 			}
 
 			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 			{
-			}
-
-			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
-			{
-
+				file_browser->file_index_c++;
 			}
 		}
     }
