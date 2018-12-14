@@ -30,7 +30,7 @@ static const char *TAG = "SD CARD";
 
 
 #define FILE_PATH_LEN			50
-#define FILE_NUM_PER_PAGE		10
+#define FILE_NUM_PER_PAGE		12
 #define FILE_BUFF_LEN			1024
 #define LCD_BUFF_LEN			(LCD_W*2)
 
@@ -39,8 +39,14 @@ typedef struct
 	uint8_t display_flag;
 	uint8_t status;
 	uint32_t file_num;
+	uint32_t page_num;
+	uint32_t page_file_num;
+	uint32_t page_index_p;
+	uint32_t page_index_c;
 	uint32_t file_index_p;
 	uint32_t file_index_c;
+	uint32_t file_index_min;
+	uint32_t file_index_max;
 	uint8_t	Buff[LCD_W*3];
 	uint8_t buff_to_lcd[LCD_BUFF_LEN];
 	char current_path[FILE_PATH_LEN];
@@ -157,6 +163,7 @@ uint32_t get_file_num(char* path)
 
 void get_file_name(char* path, uint32_t start_index)
 {
+	uint32_t i;
 	DIR * dir;
 	struct dirent * ptr;
 	dir = opendir(path);
@@ -164,6 +171,9 @@ void get_file_name(char* path, uint32_t start_index)
 	char temp_path[FILE_PATH_LEN];
 
 	memset(temp_path, 0, FILE_PATH_LEN);
+	for(i=0;i<FILE_NUM_PER_PAGE;i++)
+		memset(file_browser->all_file_name[i], 0, FILE_PATH_LEN);
+
 	while((ptr = readdir(dir)) != NULL)
 	{
 		file_index++;
@@ -218,7 +228,7 @@ void sd_card_info_display(void)
 
 	if(file_browser->file_index_c != file_browser->file_index_p)
 	{
-		printf("%d \n", file_browser->file_index_c);
+		printf("%u \n", file_browser->file_index_c);
 		LCD_ShowString(	15,
 						(file_browser->file_index_p%FILE_NUM_PER_PAGE)*18 + 18,
 						(const uint8_t *)" ");
@@ -244,8 +254,6 @@ void sd_card_task(void *pvParameter)
 	memset(file_browser, 0, sizeof(file_browser_s));
 	memcpy(file_browser->current_path, "/sdcard", FILE_PATH_LEN);
 	file_browser->display_flag = 0;
-	file_browser->file_index_p = 1;
-	file_browser->file_index_c = 0;
 
 	gpio_set_pull_mode(15, GPIO_PULLUP_ONLY);   // CMD, needed in 4- and 1- line modes
     gpio_set_pull_mode(2, GPIO_PULLUP_ONLY);    // D0, needed in 4- and 1-line modes
@@ -280,9 +288,16 @@ void sd_card_task(void *pvParameter)
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
+
     file_browser->file_num = get_file_num(file_browser->current_path);
-    get_file_name(file_browser->current_path, 1);
-	file_browser->display_flag = 2;
+    file_browser->page_num = file_browser->file_num/FILE_NUM_PER_PAGE;
+    if(file_browser->file_num%FILE_NUM_PER_PAGE != 0)
+    	file_browser->page_num++;
+    file_browser->page_index_c = 0;
+    file_browser->page_index_p = 1;
+	file_browser->file_index_p = 1;
+	printf("file_num:%u \n", file_browser->file_num);
+	printf("page_num:%u \n", file_browser->page_num);
 
     while(1)
     {
@@ -292,11 +307,85 @@ void sd_card_task(void *pvParameter)
 			{
 				file_browser->file_index_c--;
 			}
-
 			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 			{
 				file_browser->file_index_c++;
 			}
+			if(file_browser->file_index_c == (file_browser->file_index_min - 1))
+				file_browser->file_index_c = file_browser->file_index_max;
+			if(file_browser->file_index_c > file_browser->file_index_max)
+				file_browser->file_index_c = file_browser->file_index_min;
+
+			if(button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
+			{
+				file_browser->page_index_c--;
+			}
+			if(button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
+			{
+				file_browser->page_index_c++;
+			}
+			if(file_browser->page_index_c == 0xFFFFFFFF)
+				file_browser->page_index_c = file_browser->page_num - 1;
+			if(file_browser->page_index_c == file_browser->page_num)
+				file_browser->page_index_c = 0;
+
+			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			{
+				memcpy(file_browser->current_path, file_browser->all_file_name[file_browser->file_index_c], FILE_PATH_LEN);
+			    file_browser->file_num = get_file_num(file_browser->current_path);
+			    file_browser->page_num = file_browser->file_num/FILE_NUM_PER_PAGE;
+			    if(file_browser->file_num%FILE_NUM_PER_PAGE != 0)
+			    	file_browser->page_num++;
+			    file_browser->page_index_c = 0;
+			    file_browser->page_index_p = 1;
+				file_browser->file_index_p = 1;
+				printf("file_num:%u \n", file_browser->file_num);
+				printf("page_num:%u \n", file_browser->page_num);
+			}
+
+			if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			{
+				for(uint32_t i=FILE_PATH_LEN-1;i>0;i--)
+				{
+					if(file_browser->current_path[i] == '/')
+					{
+						file_browser->current_path[i] = 0;
+						break;
+					}
+					file_browser->current_path[i] = 0;
+				}
+				printf("path_:%s \n", file_browser->current_path);
+			    file_browser->file_num = get_file_num(file_browser->current_path);
+			    file_browser->page_num = file_browser->file_num/FILE_NUM_PER_PAGE;
+			    if(file_browser->file_num%FILE_NUM_PER_PAGE != 0)
+			    	file_browser->page_num++;
+			    file_browser->page_index_c = 0;
+			    file_browser->page_index_p = 1;
+				file_browser->file_index_p = 1;
+				printf("file_num:%u \n", file_browser->file_num);
+				printf("page_num:%u \n", file_browser->page_num);
+			}
+		}
+
+		if(file_browser->page_index_c != file_browser->page_index_p)
+		{
+		    if(file_browser->page_index_c < (file_browser->page_num - 1))
+		    	file_browser->page_file_num = FILE_NUM_PER_PAGE;
+		    else
+		    {
+		    	file_browser->page_file_num = file_browser->file_num%FILE_NUM_PER_PAGE;
+		    	if(file_browser->page_file_num == 0)
+			    	file_browser->page_file_num = FILE_NUM_PER_PAGE;
+		    }
+			file_browser->file_index_min = file_browser->page_index_c * FILE_NUM_PER_PAGE;
+			file_browser->file_index_max = file_browser->page_index_c * FILE_NUM_PER_PAGE + file_browser->page_file_num - 1;
+			file_browser->file_index_c = file_browser->file_index_min;
+			printf("page_file_num:%u \n", file_browser->page_file_num);
+			printf("min_index:%u \n", file_browser->file_index_min);
+			printf("max_index:%u \n", file_browser->file_index_max);
+		    get_file_name(file_browser->current_path, file_browser->file_index_c + 1);
+			file_browser->display_flag = 2;
+			file_browser->page_index_p = file_browser->page_index_c;
 		}
     }
 }
