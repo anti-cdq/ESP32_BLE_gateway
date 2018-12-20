@@ -38,6 +38,7 @@ typedef struct
 	uint8_t task_index_c;			/* current task index */
 	uint8_t task_index_p;			/* previours task index */
 	uint8_t task_status;			/* task status */
+	uint8_t display_status;			/* display status */
 	TaskHandle_t default_task_handle;
 	TaskHandle_t user_task_handle;
 	uint32_t user_task_params;

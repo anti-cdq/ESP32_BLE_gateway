@@ -30,9 +30,7 @@
 
 /************ global variables ************/
 const int SCAN_RESULT_BIT = BIT0;				//定义事件，占用事件变量的第0位，最多可以定义32个事件。
-const int LCD_DISPLAY_UPDATE_BIT = BIT1;
-const int SELECTED_TASK_START_BIT = BIT2;
-const int SELECTED_TASK_STOP_BIT = BIT3;
+
 
 EventGroupHandle_t ble_event_group;	//定义一个事件的句柄
 portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
@@ -41,14 +39,13 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 /************ local variables ************/
 user_task_t tasks[MAX_TASK_NUM] =
 {
-	{wifi_task, "wifi_task", 2048, wifi_scan_result_print,wifi_task_mem_free},
+	{wifi_task, "wifi_task", 2048, wifi_scan_result_print, wifi_task_mem_free},
 	{ble_task, "ble_task", 2048, ble_scan_result_print, ble_task_mem_free},
 	{sd_card_task, "sd_card_task", 4096, sd_card_info_display, sd_card_task_mem_free},
 };
 
 void app_main()
 {
-	uint32_t event_bits;
 	esp_err_t ret;
 
 	uart_set_baudrate(UART_NUM_0, 115200);
@@ -75,10 +72,6 @@ void app_main()
 
     while(1)
 	{
-		event_bits = xEventGroupWaitBits(ble_event_group,
-				LCD_DISPLAY_UPDATE_BIT  |
-				SELECTED_TASK_START_BIT |
-				SELECTED_TASK_STOP_BIT, 0, 0, 5/portTICK_PERIOD_MS);
 		user_task_lcd_dispaly();
 	}
 }

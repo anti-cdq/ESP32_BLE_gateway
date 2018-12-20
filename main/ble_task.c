@@ -25,11 +25,12 @@
 
 #include "driver/gpio.h"
 #include "driver/adc.h"
-#include "lcd.h"
 #include "led_control.h"
-#include "button.h"
-
+#include "lcd.h"
 #include "global_config.h"
+#include "button.h"
+#include "multi_task_management.h"
+
 #include "ble_task.h"
 
 
@@ -57,6 +58,7 @@ static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 static uint8_t display_flag = 0;
+uint8_t *button_evt;
 
 /* eclare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -550,6 +552,7 @@ void ble_task_mem_free(void)
 	ESP_ERROR_CHECK(esp_bt_controller_deinit());
 //	ESP_ERROR_CHECK(esp_bt_mem_release(ESP_BT_MODE_BTDM));
 
+	free(button_evt);
 //	free(scan_ap_num);
 //	free(scan_flag);
 //	free(scan_result);
@@ -560,9 +563,11 @@ void ble_task_mem_free(void)
 
 void ble_task(void *pvParameter)
 {
+	uint32_t event_bits;
 	esp_err_t ret;
 
 	ble_scan_result_init();
+    button_evt = (uint8_t *)malloc(BUTTON_NUM);
 
 //    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
@@ -616,14 +621,25 @@ void ble_task(void *pvParameter)
 
 	while(1)
 	{
-		xEventGroupWaitBits(ble_event_group, SCAN_RESULT_BIT, 0, 1, portMAX_DELAY);    //等待事件被置位，即等待扫描完成
-		xEventGroupClearBits(ble_event_group, SCAN_RESULT_BIT);//清除事件标志位
-		led_on();
-		ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
-		ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
+		event_bits = xEventGroupWaitBits(ble_event_group, SCAN_RESULT_BIT, 0, 1, 50/portTICK_PERIOD_MS);    //等待事件被置位，即等待扫描完成
+		if(event_bits & SCAN_RESULT_BIT)
+		{
+			xEventGroupClearBits(ble_event_group, SCAN_RESULT_BIT);//清除事件标志位
+			led_on();
+			ESP_LOGI(GATTC_TAG, "%d devices scanned in last 2 seconds.", scanned_dev_num);
+			ESP_LOGI(GATTC_TAG, "%d node used in last 2 seconds.", nodes_index);
 
-		display_flag = 1;
-		scanned_dev_num = 0;
-		esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
+			display_flag = 1;
+			scanned_dev_num = 0;
+			esp_ble_gap_start_scanning(SCAN_DURATION_SEC);
+		}
+		if(xQueueReceive(button_evt_queue, button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
+		{
+			if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			{
+				user_task_disable();
+			}
+		}
+
 	}
 }

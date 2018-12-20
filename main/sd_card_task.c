@@ -25,6 +25,7 @@
 #include "lcd.h"
 #include "global_config.h"
 #include "button.h"
+#include "multi_task_management.h"
 
 static const char *TAG = "SD CARD";
 
@@ -53,10 +54,10 @@ typedef struct
 	char current_path[FILE_PATH_LEN];
 	char all_file_name[FILE_NUM_PER_PAGE][FILE_PATH_LEN];
 	uint8_t filetype[FILE_NUM_PER_PAGE];
+	uint8_t button_evt[BUTTON_NUM];
 }file_browser_s;
 
 file_browser_s *file_browser;
-uint8_t *button_evt;
 
 
 void show_bmp_center(char* path, uint16_t offsetX, uint16_t offsetY)
@@ -198,7 +199,6 @@ void sd_card_task_mem_free(void)
 	ESP_LOGI(TAG, "Card unmounted");
 
 	free(file_browser);
-	free(button_evt);
 }
 
 
@@ -207,6 +207,8 @@ void sd_card_info_display(void)
 	uint32_t i = 0;
 	char temp[9];
 
+	if(file_browser == NULL)
+		return;
 	if(file_browser->display_flag == 1)
 	{
 		show_bmp_center(file_browser->current_path, 0, 0);
@@ -264,7 +266,6 @@ void sd_card_task(void *pvParameter)
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
 
     file_browser = (file_browser_s *)malloc(sizeof(file_browser_s));
-    button_evt = (uint8_t *)malloc(BUTTON_NUM);
 
 	memset(file_browser, 0, sizeof(file_browser_s));
 	memcpy(file_browser->current_path, "/sdcard", FILE_PATH_LEN);
@@ -307,13 +308,13 @@ void sd_card_task(void *pvParameter)
 
     while(1)
     {
-		if(xQueueReceive(button_evt_queue, button_evt, 50/portTICK_PERIOD_MS) == pdTRUE)
+		if(xQueueReceive(button_evt_queue, file_browser->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 			{
 				file_browser->file_index_c--;
 			}
-			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 			{
 				file_browser->file_index_c++;
 			}
@@ -322,11 +323,11 @@ void sd_card_task(void *pvParameter)
 			if(file_browser->file_index_c > file_browser->file_index_max)
 				file_browser->file_index_c = file_browser->file_index_min;
 
-			if(button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
 			{
 				file_browser->page_index_c--;
 			}
-			if(button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
 			{
 				file_browser->page_index_c++;
 			}
@@ -335,7 +336,7 @@ void sd_card_task(void *pvParameter)
 			if(file_browser->page_index_c == file_browser->page_num)
 				file_browser->page_index_c = 0;
 
-			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
 			{
 				if(file_browser->filetype[file_browser->file_index_c] == DT_DIR)
 				{
@@ -350,7 +351,7 @@ void sd_card_task(void *pvParameter)
 				}
 			}
 
-			if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			if(file_browser->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
 			{
 				if(file_browser->path_depth)
 				{
@@ -365,6 +366,10 @@ void sd_card_task(void *pvParameter)
 						file_browser->current_path[i] = 0;
 					}
 					update_to_path(file_browser->current_path);
+				}
+				else
+				{
+					user_task_disable();
 				}
 			}
 		}
