@@ -128,17 +128,11 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
             break;
         case SYSTEM_EVENT_SCAN_DONE:
-        	if(scan_status == 0)
-                break;
-        	else
+        	if(scan_status)
         	{
-				esp_wifi_scan_get_ap_num(&wifi_scan->scan_ap_num);
-				printf("Scan done.%d AP scanned: \n", wifi_scan->scan_ap_num);
-				if(wifi_scan->scan_ap_num > MAX_WIFI_NUM)
-					wifi_scan->scan_ap_num = MAX_WIFI_NUM;
 				wifi_scan->scan_flag = 1;
-				break;
         	}
+			break;
         default:
             break;
     }
@@ -159,6 +153,8 @@ void wifi_scan_result_print(void)
 
 	for(i=0;i<wifi_scan->scan_ap_num;i++)
 	{
+		if(wifi_scan == NULL)
+			return;
 		sprintf(wifi_scan->print_temp, " %20.20s | %d", wifi_scan->scan_result[i].ssid, wifi_scan->scan_result[i].rssi);
 //		sprintf(ap_mac, "%02X:%02X:%02X:%02X:%02X:%02X"
 //						, scan_result[i].bssid[0]
@@ -231,6 +227,10 @@ void wifi_task(void *pvParameter)
 		}
 		if(wifi_scan->scan_flag == 1)
 		{
+			esp_wifi_scan_get_ap_num(&wifi_scan->scan_ap_num);
+			printf("Scan done.%d AP scanned: \n", wifi_scan->scan_ap_num);
+			if(wifi_scan->scan_ap_num > MAX_WIFI_NUM)
+				wifi_scan->scan_ap_num = MAX_WIFI_NUM;
 			ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&wifi_scan->scan_ap_num, wifi_scan->scan_result));
 			wifi_scan->display_flag = 1;
 			wifi_scan->scan_flag = 0;
