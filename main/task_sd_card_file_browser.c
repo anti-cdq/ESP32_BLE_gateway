@@ -35,6 +35,22 @@ static const char *TAG = "SD CARD";
 #define FILE_BUFF_LEN			1024
 #define LCD_BUFF_LEN			(LCD_W*2)
 
+#define SDMMC_HOST_USER() {\
+    .flags = SDMMC_HOST_FLAG_4BIT, \
+    .slot = SDMMC_HOST_SLOT_1, \
+    .max_freq_khz = SDMMC_FREQ_HIGHSPEED, \
+    .io_voltage = 3.3f, \
+    .init = &sdmmc_host_init, \
+    .set_bus_width = &sdmmc_host_set_bus_width, \
+    .get_bus_width = &sdmmc_host_get_slot_width, \
+    .set_card_clk = &sdmmc_host_set_card_clk, \
+    .do_transaction = &sdmmc_host_do_transaction, \
+    .deinit = &sdmmc_host_deinit, \
+    .io_int_enable = sdmmc_host_io_int_enable, \
+    .io_int_wait = sdmmc_host_io_int_wait, \
+    .command_timeout_ms = 0, \
+}
+
 typedef struct
 {
 	uint8_t display_flag;
@@ -172,9 +188,6 @@ void get_file_name(char* path, uint32_t start_index)
 	dir = opendir(path);
 	uint32_t file_index = 0;
 
-	for(i=0;i<FILE_NUM_PER_PAGE;i++)
-		memset(file_browser->all_file_name[i], 0, FILE_PATH_LEN);
-
 	while((ptr = readdir(dir)) != NULL)
 	{
 		file_index++;
@@ -182,6 +195,7 @@ void get_file_name(char* path, uint32_t start_index)
 			break;
 		if(file_index >= start_index)
 		{
+			memset(file_browser->all_file_name[file_index-start_index], 0, FILE_PATH_LEN);
 			memcpy(	file_browser->all_file_name[file_index-start_index],
 					ptr->d_name,
 					strlen(ptr->d_name));
@@ -224,7 +238,7 @@ void sd_card_info_display(void)
 				file_browser->page_num);
 		LCD_ShowString(160, 0, (const uint8_t *)temp);
 
-		for(i=0;i<FILE_NUM_PER_PAGE;i++)
+		for(i=0;i<file_browser->page_file_num;i++)
 		{
 			LCD_ShowString(30, i*18+18, (const uint8_t *)file_browser->all_file_name[i]);
 		}
@@ -262,7 +276,7 @@ void sd_card_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "Initializing SD card");
     ESP_LOGI(TAG, "Using SDMMC peripheral");
-    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    sdmmc_host_t host = SDMMC_HOST_USER();
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
 
     file_browser = (file_browser_s *)malloc(sizeof(file_browser_s));

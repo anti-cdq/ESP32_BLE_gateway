@@ -22,9 +22,9 @@
 #include "lcd.h"
 #include "led_control.h"
 #include "multi_task_management.h"
-#include "ble_task.h"
-#include "wifi_task.h"
-#include "sd_card_task.h"
+#include "task_ble_scan.h"
+#include "task_wifi_scan.h"
+#include "task_sd_card_file_browser.h"
 #include "task_button.h"
 
 
@@ -47,11 +47,15 @@ user_task_t tasks[MAX_TASK_NUM] =
 void app_main()
 {
 	esp_err_t ret;
+	int64_t temp1, temp2;
 
 	uart_set_baudrate(UART_NUM_0, 115200);
 	led_init();
 	lcd_init();
+	temp1 = esp_timer_get_time();
 	LCD_Clear(BLACK);
+	temp2 = esp_timer_get_time();
+	printf("%d us\n", (int)(temp2-temp1));
 
     // Initialize NVS.
     ret = nvs_flash_init();

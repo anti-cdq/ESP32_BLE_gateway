@@ -93,8 +93,9 @@ void hw_spi_init(void)
         .max_transfer_sz=500
     };
     spi_device_interface_config_t devcfg={
-        .clock_speed_hz=26*1000*1000,			//Clock out at 10 MHz
-        .mode=3,								//SPI mode 0
+        .clock_speed_hz=40*1000*1000,			//Clock out at 10 MHz
+        .flags=SPI_DEVICE_NO_DUMMY,				//ignore errors
+		.mode=3,								//SPI mode 0
         .spics_io_num=-1,						//CS pin
         .queue_size=7,							//We want to be able to queue 7 transactions at a time
         .pre_cb=lcd_spi_pre_transfer_callback,	//Specify pre-transfer callback to handle D/C line
