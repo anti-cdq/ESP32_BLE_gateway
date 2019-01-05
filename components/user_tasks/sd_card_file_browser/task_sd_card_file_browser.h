@@ -9,9 +9,9 @@
 #define EXAMPLES_BLE_GATEWAY_DEMO_MAIN_SD_CARD_TASK_H_
 
 
-void sd_card_task_mem_free(void);
-void sd_card_info_display(void);
-void sd_card_task(void *pvParameter);
+void mem_free_task_sd_card_file_browser(void);
+void lcd_display_task_sd_card_file_browser(void);
+void task_sd_card_file_browser(void *pvParameter);
 
 
 #endif /* EXAMPLES_BLE_GATEWAY_DEMO_MAIN_SD_CARD_TASK_H_ */

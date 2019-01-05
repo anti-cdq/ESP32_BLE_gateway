@@ -140,7 +140,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 }
 
 
-void wifi_scan_result_print(void)
+void lcd_display_task_wifi_scan(void)
 {
 	uint16_t i;
 
@@ -181,7 +181,7 @@ void wifi_scan_result_print(void)
 }
 
 
-void wifi_task_mem_free(void)
+void mem_free_task_wifi_scan(void)
 {
 	scan_status = 0;
 	ESP_ERROR_CHECK(esp_wifi_scan_stop());
@@ -192,7 +192,7 @@ void wifi_task_mem_free(void)
 }
 
 
-void wifi_task(void *pvParameter)
+void task_wifi_scan(void *pvParameter)
 {
 	wifi_scan = (wifi_scan_s *)malloc(sizeof(wifi_scan_s));
 	memset(wifi_scan, 0, sizeof(wifi_scan_s));

@@ -206,7 +206,7 @@ void get_file_name(char* path, uint32_t start_index)
 }
 
 
-void sd_card_task_mem_free(void)
+void mem_free_task_sd_card_file_browser(void)
 {
 	// All done, unmount partition and disable SDMMC or SPI peripheral
 	esp_vfs_fat_sdmmc_unmount();
@@ -216,7 +216,7 @@ void sd_card_task_mem_free(void)
 }
 
 
-void sd_card_info_display(void)
+void lcd_display_task_sd_card_file_browser(void)
 {
 	uint32_t i = 0;
 	char temp[9];
@@ -272,7 +272,7 @@ void update_to_path(char* path)
 }
 
 
-void sd_card_task(void *pvParameter)
+void task_sd_card_file_browser(void *pvParameter)
 {
     ESP_LOGI(TAG, "Initializing SD card");
     ESP_LOGI(TAG, "Using SDMMC peripheral");

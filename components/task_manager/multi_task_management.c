@@ -69,9 +69,13 @@ void task_default(void *pvParameter)
 
 void display_default(void)
 {
+	uint32_t heap_size;
+
 	if(task_manager.display_status)
 	{
+		heap_size = heap_caps_get_free_size(MALLOC_CAP_8BIT);
 		LCD_Clear(BLACK);
+		LCD_ShowNum(10, 0, heap_size, 10);
 		for(uint8_t i=0;i<=task_manager.task_num;i++)
 		{
 			LCD_ShowString(	MAIN_PAGE_LINE_MARGIN,

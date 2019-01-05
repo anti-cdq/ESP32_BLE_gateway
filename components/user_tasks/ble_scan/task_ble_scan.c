@@ -484,7 +484,7 @@ void device_mac_add(esp_ble_gap_cb_param_t* scanned_dev)
 }
 
 
-void ble_scan_result_print(void)
+void lcd_display_task_ble_scan(void)
 {
 	char print_temp[30];
 	char mac[18];
@@ -543,7 +543,7 @@ void ble_scan_result_print(void)
 }
 
 
-void ble_task_mem_free(void)
+void mem_free_task_ble_scan(void)
 {
 	ESP_ERROR_CHECK(esp_ble_gap_stop_scanning());
 	ESP_ERROR_CHECK(esp_bluedroid_disable());
@@ -561,7 +561,7 @@ void ble_task_mem_free(void)
 }
 
 
-void ble_task(void *pvParameter)
+void task_ble_scan(void *pvParameter)
 {
 	uint32_t event_bits;
 	esp_err_t ret;
@@ -643,3 +643,4 @@ void ble_task(void *pvParameter)
 
 	}
 }
+

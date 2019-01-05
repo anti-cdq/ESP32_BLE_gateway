@@ -10,9 +10,9 @@
 
 
 
-void wifi_task(void *pvParameter);
-void wifi_scan_result_print(void);
-void wifi_task_mem_free(void);
+void task_wifi_scan(void *pvParameter);
+void lcd_display_task_wifi_scan(void);
+void mem_free_task_wifi_scan(void);
 
 
 #endif /* EXAMPLES_BLE_GATEWAY_DEMO_MAIN_WIFI_TASK_H_ */

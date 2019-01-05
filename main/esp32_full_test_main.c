@@ -22,6 +22,7 @@
 #include "lcd.h"
 #include "led_control.h"
 #include "multi_task_management.h"
+#include "task_for_test.h"
 #include "task_ble_scan.h"
 #include "task_wifi_scan.h"
 #include "task_sd_card_file_browser.h"
@@ -39,9 +40,10 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 /************ local variables ************/
 user_task_t tasks[MAX_TASK_NUM] =
 {
-	{wifi_task, "wifi_task", 2048, wifi_scan_result_print, wifi_task_mem_free},
-	{ble_task, "ble_task", 2048, ble_scan_result_print, ble_task_mem_free},
-	{sd_card_task, "sd_card_task", 4096, sd_card_info_display, sd_card_task_mem_free},
+	{task_for_test, "for_test", 2048, lcd_display_task_for_test, mem_free_task_for_test},
+	{task_wifi_scan, "wifi_scan", 2048, lcd_display_task_wifi_scan, mem_free_task_wifi_scan},
+	{task_ble_scan, "ble_scan", 2048, lcd_display_task_ble_scan, mem_free_task_ble_scan},
+	{task_sd_card_file_browser, "sd_card_task", 4096, lcd_display_task_sd_card_file_browser, mem_free_task_sd_card_file_browser},
 };
 
 void app_main()
@@ -73,6 +75,7 @@ void app_main()
     register_a_task(&tasks[0]);
     register_a_task(&tasks[1]);
     register_a_task(&tasks[2]);
+    register_a_task(&tasks[3]);
 
     while(1)
 	{

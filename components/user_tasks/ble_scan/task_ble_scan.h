@@ -37,9 +37,9 @@ typedef struct
 
 void ble_scan_result_init(void);
 void device_mac_add(esp_ble_gap_cb_param_t* scanned_dev);
-void ble_scan_result_print(void);
-void ble_task_mem_free(void);
-void ble_task(void *pvParameter);
+void lcd_display_task_ble_scan(void);
+void mem_free_task_ble_scan(void);
+void task_ble_scan(void *pvParameter);
 
 
 
