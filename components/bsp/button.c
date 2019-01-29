@@ -60,7 +60,20 @@ void button_detect(void)
 		buttons[i] <<= 1;
 		if( !gpio_get_level(button_io_array[i]) )
 			buttons[i] |= 0x01;
-
+/*	for debug
+		if(buttons[i] != 0x00 && buttons[i] != 0xFF)
+		{
+			printf("button %d state: ", i);
+			for(uint8_t iii=7;iii<8;iii--)
+			{
+				if((buttons[i] >> iii) & 0x01)
+					printf("1");
+				else
+					printf("0");
+			}
+			printf("\n");
+		}
+*/
 		if(buttons[i] == BUTTON_STATE_PRESSED_UP)
 			result[i] = BUTTON_EVT_PRESSED_UP;
 		else if(buttons[i] == BUTTON_STATE_PRESSED_DOWN)

@@ -7,14 +7,7 @@
 # please read the ESP-IDF documents if you need to do this.
 #
 
-COMPONENT_ADD_INCLUDEDIRS +=	ble_scan/						\
-								wifi_scan/						\
-								sd_card_file_browser/			\
-								string_input/					\
-								for_test/
+COMPONENT_ADD_INCLUDEDIRS := .
 
-COMPONENT_SRCDIRS += 			ble_scan/						\
-								wifi_scan/						\
-								sd_card_file_browser/			\
-								string_input/					\
-								for_test/
+COMPONENT_SRCDIRS := .
+# CFLAGS +=

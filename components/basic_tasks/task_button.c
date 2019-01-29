@@ -13,6 +13,7 @@
 #include "freertos/queue.h"
 
 #include "button.h"
+#include "task_button.h"
 
 
 xQueueHandle  button_evt_queue;
@@ -40,7 +41,7 @@ void button_task(void *pvParameter)
     while(1)
     {
     	button_detect();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(BUTTON_DETECT_PERIOD_MS / portTICK_PERIOD_MS);
     }
 }
 

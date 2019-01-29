@@ -22,6 +22,7 @@
 #include "lcd.h"
 #include "led_control.h"
 #include "multi_task_management.h"
+#include "task_string_input.h"
 #include "task_for_test.h"
 #include "task_ble_scan.h"
 #include "task_wifi_scan.h"
@@ -40,6 +41,7 @@ portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
 /************ local variables ************/
 user_task_t tasks[MAX_TASK_NUM] =
 {
+	{task_string_input, "string_input", 2048, lcd_display_task_string_input, mem_free_task_string_input},
 	{task_for_test, "for_test", 2048, lcd_display_task_for_test, mem_free_task_for_test},
 	{task_wifi_scan, "wifi_scan", 2048, lcd_display_task_wifi_scan, mem_free_task_wifi_scan},
 	{task_ble_scan, "ble_scan", 2048, lcd_display_task_ble_scan, mem_free_task_ble_scan},
@@ -57,7 +59,7 @@ void app_main()
 	temp1 = esp_timer_get_time();
 	LCD_Clear(BLACK);
 	temp2 = esp_timer_get_time();
-	printf("%d us\n", (int)(temp2-temp1));
+	printf("screen clear cost: %dus\n", (int)(temp2-temp1));
 
     // Initialize NVS.
     ret = nvs_flash_init();
@@ -76,6 +78,7 @@ void app_main()
     register_a_task(&tasks[1]);
     register_a_task(&tasks[2]);
     register_a_task(&tasks[3]);
+    register_a_task(&tasks[4]);
 
     while(1)
 	{
