@@ -8,7 +8,19 @@
 #include "driver/gpio.h"
 #include "button.h"
 
+
+typedef struct
+{
+	uint16_t cnt;
+	uint8_t button;
+	uint8_t state		: 4;
+	uint8_t click		: 4;
+}button_t;
+
+
+button_t buttons[BUTTON_NUM];
 button_event_handler button_evt_handler = NULL;
+
 
 uint8_t button_io_array[BUTTON_NUM] =
 {
@@ -49,47 +61,53 @@ void button_init(button_event_handler evt_handler)
  */
 void button_detect(void)
 {
-	static volatile uint8_t buttons[BUTTON_NUM] = {0, 0, 0, 0, 0, 0, 0};
-	static volatile uint8_t hold_cnt[BUTTON_NUM] = {0, 0, 0, 0, 0, 0, 0};
 	uint8_t result[BUTTON_NUM];
 	uint8_t i;
 
 	for(i=0;i<BUTTON_NUM;i++)
 	{
 		result[i] = BUTTON_EVT_IDLE;
-		buttons[i] <<= 1;
+		buttons[i].button <<= 1;
 		if( !gpio_get_level(button_io_array[i]) )
-			buttons[i] |= 0x01;
-/*	for debug
-		if(buttons[i] != 0x00 && buttons[i] != 0xFF)
-		{
-			printf("button %d state: ", i);
-			for(uint8_t iii=7;iii<8;iii--)
-			{
-				if((buttons[i] >> iii) & 0x01)
-					printf("1");
-				else
-					printf("0");
-			}
-			printf("\n");
-		}
-*/
-		if(buttons[i] == BUTTON_STATE_PRESSED_UP)
-			result[i] = BUTTON_EVT_PRESSED_UP;
-		else if(buttons[i] == BUTTON_STATE_PRESSED_DOWN)
-			result[i] = BUTTON_EVT_PRESSED_DOWN;
+			buttons[i].button |= 0x01;
 
-		if(buttons[i] == BUTTON_STATE_HOLD_DOWN)
+		if(buttons[i].state)
+			buttons[i].cnt++;
+
+		if(buttons[i].button[i] == BUTTON_STATE_PRESSED_DOWN)
 		{
-			hold_cnt[i]++;
-			if(hold_cnt[i] == 25)
+			result[i] = BUTTON_EVT_PRESSED_DOWN;
+			if(buttons[i].state || buttons[i].cnt < BUTTON_SHORT_CLICK)
 			{
-				hold_cnt[i] = 24;
-				result[i] = BUTTON_EVT_HOLD_DOWN;
+				buttons[i].cnt = 0;
+				buttons[i].state++;
 			}
 		}
-		else
-			hold_cnt[i] = 0;
+		else if(buttons[i].button[i] == BUTTON_STATE_PRESSED_UP)
+		{
+			result[i] = BUTTON_EVT_PRESSED_UP;
+			if(buttons[i].state != 0xFF)
+				buttons[i].state++;
+			else
+				buttons[i].state = 0;
+			buttons[i].cnt = 0;
+		}
+		else if(buttons[i].button[i] == BUTTON_STATE_HOLD_DOWN)
+		{
+			if(buttons[i].cnt > BUTTON_LONG_PRESS)
+			{
+				if(buttons[i].state == 0x01 || buttons[i].state == 0xFF)
+				{
+					buttons[i].state = 0xFF;
+					buttons[i].cnt -= 10;
+				}
+				else
+				{
+					buttons[i].state = 0;
+					buttons[i].cnt = 0;
+				}
+			}
+		}
 	}
 
 	button_evt_handler(result);

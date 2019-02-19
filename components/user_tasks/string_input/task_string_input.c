@@ -71,6 +71,7 @@ void task_string_input(void *pvParameter)
 {
 	string_input = (string_input_s *)malloc(sizeof(string_input_s));
 	memset(string_input, 0, sizeof(string_input_s));
+	memset(string_input->input, ASCII_CHAR_MIN, sizeof(MAX_STRING_LEN));
 
 	string_input->char_index = 0;
 	string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
@@ -104,24 +105,34 @@ void task_string_input(void *pvParameter)
 			}
 			if(string_input->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
 			{
-
+				if(string_input->char_index > 0)
+				{
+					string_input->char_index--;
+					if(string_input->input[string_input->char_index] == 0x00)
+						string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
+				}
 			}
 			if(string_input->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
 			{
-
+				if(string_input->char_index < MAX_STRING_LEN)
+				{
+					string_input->char_index++;
+					if(string_input->input[string_input->char_index] == 0x00)
+						string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
+				}
 			}
 			if(string_input->button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
 			{
 				if(string_input->char_index < MAX_STRING_LEN)
 				{
 					string_input->char_index++;
-					string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
 				}
 			}
 			if(string_input->button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_UP)
 			{
 				printf("String:%s\n", string_input->input);
-				memset(string_input, 0, sizeof(string_input_s));
+				memset(string_input->input, ASCII_CHAR_MIN, sizeof(MAX_STRING_LEN));
+				string_input->display_flag = 2;
 			}
 		}
 	}

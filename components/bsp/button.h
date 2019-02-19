@@ -1,7 +1,7 @@
 /*
  * button.h
  *
- *  Created on: 2018Äê10ÔÂ12ÈÕ
+ *  Created on: 2018ï¿½ï¿½10ï¿½ï¿½12ï¿½ï¿½
  *      Author: Linuxer
  */
 
@@ -33,6 +33,12 @@
 #define	BUTTON_STATE_PRESSED_UP		0x80
 #define	BUTTON_STATE_PRESSED_DOWN	0x7F
 #define	BUTTON_STATE_HOLD_DOWN		0xFF
+#define	BUTTON_STATE_HOLD_UP		0x00
+
+
+#define BUTTON_SHORT_CLICK_UP		30
+#define BUTTON_SHORT_CLICK_DOWN		30
+#define BUTTON_LONG_PRESS			50
 
 
 #define	BUTTON_EVT_IDLE				0
