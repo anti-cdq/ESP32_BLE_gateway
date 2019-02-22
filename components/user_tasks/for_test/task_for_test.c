@@ -9,6 +9,7 @@
 
 #include "esp_log.h"
 
+#include "ws2818.h"
 #include "lcd.h"
 #include "global_config.h"
 #include "button.h"
@@ -24,6 +25,7 @@ typedef struct
 }for_test_s;
 
 for_test_s *for_test;
+rgb_t *ws2818_rgb;
 
 
 void lcd_display_task_for_test(void)
@@ -36,10 +38,10 @@ void lcd_display_task_for_test(void)
 	if(for_test->display_flag == 1)
 	{
 		LCD_Clear(BLACK);
-		LCD_DrawPoint(10, 20);//画点
-		LCD_DrawPoint_big(50, 40);//画一个大点
+		LCD_DrawPoint(20, 150);//画点
+		LCD_DrawPoint_big(40, 150);//画一个大点
 		Draw_Circle(100, 100, 30);
-		LCD_DrawLine(20, 20, 200, 100);
+		LCD_DrawLine(10, 150, 200, 100);
 //		LCD_DrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 		LCD_Fill(10, 200, 200, 230, YELLOW);
 
@@ -56,42 +58,61 @@ void lcd_display_task_for_test(void)
 void mem_free_task_for_test(void)
 {
 	free(for_test);
+	free(ws2818_rgb);
 }
 
 
 void task_for_test(void *pvParameter)
 {
+	uint8_t pixel_index = 0;
+
 	for_test = (for_test_s *)malloc(sizeof(for_test_s));
 	memset(for_test, 0, sizeof(for_test_s));
 	for_test->display_flag = 1;
 
+	ws2818_spi_init();
+	ws2818_rgb = (rgb_t *)malloc(sizeof(rgb_t)*PIXEL_NUM);
+	memset(ws2818_rgb, 0, sizeof(rgb_t)*PIXEL_NUM);
+
 	for (;;)
 	{
+		ws2818_update(ws2818_rgb, PIXEL_NUM);
 		if(xQueueReceive(button_evt_queue, for_test->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
 			if(for_test->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
 			{
+				memset(ws2818_rgb, 0, sizeof(rgb_t)*PIXEL_NUM);
+				ws2818_update(ws2818_rgb, PIXEL_NUM);
+				ws2818_spi_deinit();
 				user_task_disable();
 			}
 
 			if(for_test->button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
 			{
-				for_test->counter--;
+				for_test->counter++;
+				pixel_index++;
+				if(pixel_index == 0x08)
+					pixel_index = 0x00;
 				for_test->display_flag = 2;
 			}
 			if(for_test->button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
 			{
-				for_test->counter++;
+				for_test->counter--;
+				pixel_index--;
+				if(pixel_index == 0xFF)
+					pixel_index = 0x07;
 				for_test->display_flag = 2;
 			}
 			if(for_test->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
 			{
 				for_test->counter--;
+				ws2818_rgb[pixel_index].green--;
 				for_test->display_flag = 2;
 			}
 			if(for_test->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
 			{
 				for_test->counter++;
+				ws2818_rgb[pixel_index].green++;
 				for_test->display_flag = 2;
 			}
 			if(for_test->button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_UP)

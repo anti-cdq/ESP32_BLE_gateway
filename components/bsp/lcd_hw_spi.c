@@ -24,7 +24,7 @@ uint16_t BACK_COLOR = BLACK, POINT_COLOR = YELLOW;
 #define PARALLEL_LINES 16
 
 
-spi_device_handle_t spi;
+spi_device_handle_t lcd_spi;
 
 
 typedef struct {
@@ -104,13 +104,13 @@ void hw_spi_init(void)
     ret=spi_bus_initialize(HSPI_HOST, &buscfg, 1);
     ESP_ERROR_CHECK(ret);
     //Attach the LCD to the SPI bus
-    ret=spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
+    ret=spi_bus_add_device(HSPI_HOST, &devcfg, &lcd_spi);
     ESP_ERROR_CHECK(ret);
 }
 
 
 //Send a command to the LCD. Uses spi_device_transmit, which waits until the transfer is complete.
-void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
+void lcd_cmd(spi_device_handle_t lcd_spi, const uint8_t cmd)
 {
     esp_err_t ret;
     spi_transaction_t t;
@@ -118,12 +118,12 @@ void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
     t.length=8;                     //Command is 8 bits
     t.tx_buffer=&cmd;               //The data is the cmd itself
     t.user=(void*)0;                //D/C needs to be set to 0
-    ret=spi_device_transmit(spi, &t);  //Transmit!
+    ret=spi_device_transmit(lcd_spi, &t);  //Transmit!
     assert(ret==ESP_OK);            //Should have had no issues.
 }
 
 //Send data to the LCD. Uses spi_device_transmit, which waits until the transfer is complete.
-void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
+void lcd_data(spi_device_handle_t lcd_spi, const uint8_t *data, int len)
 {
     esp_err_t ret;
     spi_transaction_t t;
@@ -132,14 +132,14 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
     t.length=len*8;                 //Len is in bytes, transaction length is in bits.
     t.tx_buffer=data;               //Data
     t.user=(void*)1;                //D/C needs to be set to 1
-    ret=spi_device_transmit(spi, &t);  //Transmit!
+    ret=spi_device_transmit(lcd_spi, &t);  //Transmit!
     assert(ret==ESP_OK);            //Should have had no issues.
 }
 
 
 void lcd_write_data(const uint8_t *data, int len)
 {
-	lcd_data(spi, data, len);
+	lcd_data(lcd_spi, data, len);
 }
 
 //Initialize the display
@@ -161,8 +161,8 @@ void lcd_init(void)
     //Send all the commands
     while (st_init_cmds[cmd].databytes!=0xff)
     {
-        lcd_cmd(spi, st_init_cmds[cmd].cmd);
-        lcd_data(spi, st_init_cmds[cmd].data, st_init_cmds[cmd].databytes&0x1F);
+        lcd_cmd(lcd_spi, st_init_cmds[cmd].cmd);
+        lcd_data(lcd_spi, st_init_cmds[cmd].data, st_init_cmds[cmd].databytes&0x1F);
         if (st_init_cmds[cmd].databytes&0x80)
         {
             vTaskDelay(100 / portTICK_RATE_MS);
@@ -174,18 +174,18 @@ void lcd_init(void)
 
 void LCD_WR_DATA8(uint8_t value)
 {
-    lcd_data(spi, &value, 1);
+    lcd_data(lcd_spi, &value, 1);
 }
 
 void LCD_WR_DATA(uint16_t value)
 {
 	uint8_t temp_data[2] = {value>>8, (uint8_t)value};
-    lcd_data(spi, temp_data, 2);
+    lcd_data(lcd_spi, temp_data, 2);
 }
 
 void LCD_WR_REG(uint8_t value)
 {
-	lcd_cmd(spi, value);
+	lcd_cmd(lcd_spi, value);
 }
 
 
@@ -199,8 +199,8 @@ void Address_set(unsigned int x1,unsigned int y1,unsigned int x2,unsigned int y2
 	temp_cmd.data[2] = x2>>8;
 	temp_cmd.data[3] = x2;
 	temp_cmd.databytes = 4;
-    lcd_cmd(spi, temp_cmd.cmd);
-    lcd_data(spi, temp_cmd.data, temp_cmd.databytes);
+    lcd_cmd(lcd_spi, temp_cmd.cmd);
+    lcd_data(lcd_spi, temp_cmd.data, temp_cmd.databytes);
 
 	temp_cmd.cmd = 0x2b;
 	temp_cmd.data[0] = y1>>8;
@@ -208,10 +208,10 @@ void Address_set(unsigned int x1,unsigned int y1,unsigned int x2,unsigned int y2
 	temp_cmd.data[2] = y2>>8;
 	temp_cmd.data[3] = y2;
 	temp_cmd.databytes = 4;
-    lcd_cmd(spi, temp_cmd.cmd);
-    lcd_data(spi, temp_cmd.data, temp_cmd.databytes);
+    lcd_cmd(lcd_spi, temp_cmd.cmd);
+    lcd_data(lcd_spi, temp_cmd.data, temp_cmd.databytes);
 
-    lcd_cmd(spi, 0x2C);
+    lcd_cmd(lcd_spi, 0x2C);
 }
 
 
@@ -228,7 +228,7 @@ void LCD_Clear(uint16_t color)
 	}
 	for(i=0;i<240;i++)
 	{
-		lcd_data(spi, two_byte, 480);
+		lcd_data(lcd_spi, two_byte, 480);
 	}
 }
 
@@ -246,7 +246,7 @@ void LCD_Fill(uint16_t xsta,uint16_t ysta,uint16_t xend,uint16_t yend,uint16_t c
 	}
 	for(i=ysta;i<yend+1;i++)
 	{
-		lcd_data(spi, two_byte, width*2);
+		lcd_data(lcd_spi, two_byte, width*2);
 	}
 }
 
@@ -371,7 +371,7 @@ void LCD_ShowChar(uint16_t x,uint16_t y,uint8_t num)
 		x=x0;
 		y++;
 	}
-	lcd_data(spi, spi_buffer_tx, 256);
+	lcd_data(lcd_spi, spi_buffer_tx, 256);
 }
 
 
