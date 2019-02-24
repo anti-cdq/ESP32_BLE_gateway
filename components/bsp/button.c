@@ -79,62 +79,55 @@ void button_detect(void)
 			buttons[i].click = 0;
 		}
 
-		if(buttons[i].io == BUTTON_STATE_PRESSED_DOWN)
+		switch(buttons[i].io&0x0F)
 		{
-			result[i] = BUTTON_EVT_PRESSED_DOWN;
-			if(buttons[i].state == 0)	//第一次按下
-			{
-				buttons[i].state = 1;
-			}
-			else if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP)
-			{
-				buttons[i].state = 0;
-			}
-			else if(buttons[i].click)	//第n次按下
-			{
+			case BUTTON_STATE_PRESSED_DOWN:	//按下
+				result[i] = BUTTON_EVT_PRESSED_DOWN;
 				buttons[i].cnt = 0;
 				buttons[i].state = 1;
-			}
-		}
-		else if(buttons[i].io == BUTTON_STATE_PRESSED_UP)
-		{
-			result[i] = BUTTON_EVT_PRESSED_UP;
-			if(buttons[i].state == 1 && buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
-			{
-				buttons[i].state = 2;
-				buttons[i].click++;
-				buttons[i].cnt = 0;
-			}
-			else
-				buttons[i].state = 0;
-		}
-		else if(buttons[i].io == BUTTON_STATE_HOLD_DOWN)	//完全按住时检测是否为长按
-		{
-			if(buttons[i].cnt > BUTTON_LONG_PRESS)			//降低长按触发频率
-			{
-				if(buttons[i].click == 0 || buttons[i].state == 3)
+				break;
+
+			case BUTTON_STATE_PRESSED_UP:	//弹起
+				result[i] = BUTTON_EVT_PRESSED_UP;
+				if(buttons[i].state == 1 && buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
 				{
-					result[i] = BUTTON_EVT_HOLD_DOWN;
-					buttons[i].state = 3;
-					buttons[i].cnt -= 10;
+					buttons[i].state = 2;
+					buttons[i].click++;
+					buttons[i].cnt = 0;
 				}
 				else
-				{
 					buttons[i].state = 0;
-				}
-			}
-		}
-		else
-		{
-			if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP)
-			{
-				if(buttons[i].click)
+				break;
+
+			case BUTTON_STATE_HOLD_DOWN:	//按住
+				if(buttons[i].cnt > BUTTON_LONG_PRESS)			//降低长按触发频率
 				{
-					result[i] |= buttons[i].click;
-					buttons[i].click = 0;
-					buttons[i].state = 0;
+					if(buttons[i].click == 0 || buttons[i].state == 3)
+					{
+						result[i] = BUTTON_EVT_HOLD_DOWN;
+						buttons[i].state = 3;
+						buttons[i].cnt -= 10;
+					}
+					else
+					{
+						buttons[i].state = 0;
+					}
 				}
-			}
+				break;
+
+			case BUTTON_STATE_HOLD_UP:		//空闲
+				break;
+
+			default:
+				if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP)
+				{
+					if(buttons[i].click)
+					{
+						result[i] |= buttons[i].click;
+						buttons[i].state = 0;
+					}
+				}
+				break;
 		}
 	}
 
