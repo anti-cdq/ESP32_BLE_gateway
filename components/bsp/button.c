@@ -12,8 +12,8 @@
 typedef struct
 {
 	uint16_t cnt;				//用于各个事件的计时，判断连击的按下和松开是否超时，或者判断是否为长按等等
-	uint8_t button;				//用于记录按键的状态，每bit代表一次检测状态，0表示弹起，1表示按下，最低位为最新检测
-	uint8_t state		: 4;	//零表示没有按键事件正在进行，奇数表示按下，偶数表示弹起
+	uint8_t io;					//用于记录按键的状态，每bit代表一次检测状态，0表示弹起，1表示按下，最低位为最新检测
+	uint8_t state		: 4;	//零表示没有按键事件正在进行，1表示按下，2表示弹起, 3表示长按
 	uint8_t click		: 4;	//用于计算连击数，比如单击、双击、三击
 }button_t;
 
@@ -66,49 +66,73 @@ void button_detect(void)
 
 	for(i=0;i<BUTTON_NUM;i++)
 	{
-		result[i] = BUTTON_EVT_IDLE;
-		buttons[i].button <<= 1;
+		result[i] = BUTTON_EVT_IDLE;	//事件先清除
+		buttons[i].io <<= 1;
 		if( !gpio_get_level(button_io_array[i]) )
-			buttons[i].button |= 0x01;
+			buttons[i].io |= 0x01;
 
 		if(buttons[i].state)
 			buttons[i].cnt++;
+		else
+		{
+			buttons[i].cnt = 0;
+			buttons[i].click = 0;
+		}
 
-		if(buttons[i].button == BUTTON_STATE_PRESSED_DOWN)
+		if(buttons[i].io == BUTTON_STATE_PRESSED_DOWN)
 		{
 			result[i] = BUTTON_EVT_PRESSED_DOWN;
-			if(buttons[i].state == 0 && buttons[i].cnt == 0)
+			if(buttons[i].state == 0)	//第一次按下
 			{
-				buttons[i].state++;
+				buttons[i].state = 1;
 			}
-			else if(buttons[i].state || buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
+			else if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP)
+			{
+				buttons[i].state = 0;
+			}
+			else if(buttons[i].click)	//第n次按下
 			{
 				buttons[i].cnt = 0;
-				buttons[i].state++;
+				buttons[i].state = 1;
 			}
 		}
-		else if(buttons[i].button == BUTTON_STATE_PRESSED_UP)
+		else if(buttons[i].io == BUTTON_STATE_PRESSED_UP)
 		{
 			result[i] = BUTTON_EVT_PRESSED_UP;
-			if(buttons[i].state && buttons[i].state < 0xF)
-				buttons[i].state++;
+			if(buttons[i].state == 1 && buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
+			{
+				buttons[i].state = 2;
+				buttons[i].click++;
+				buttons[i].cnt = 0;
+			}
 			else
 				buttons[i].state = 0;
-			buttons[i].cnt = 0;
 		}
-		else if(buttons[i].button == BUTTON_STATE_HOLD_DOWN)
+		else if(buttons[i].io == BUTTON_STATE_HOLD_DOWN)	//完全按住时检测是否为长按
 		{
-			if(buttons[i].cnt > BUTTON_LONG_PRESS)
+			if(buttons[i].cnt > BUTTON_LONG_PRESS)			//降低长按触发频率
 			{
-				if(buttons[i].state == 0x01 || buttons[i].state == 0xF)
+				if(buttons[i].click == 0 || buttons[i].state == 3)
 				{
-					buttons[i].state = 0xF;
+					result[i] = BUTTON_EVT_HOLD_DOWN;
+					buttons[i].state = 3;
 					buttons[i].cnt -= 10;
 				}
 				else
 				{
 					buttons[i].state = 0;
-					buttons[i].cnt = 0;
+				}
+			}
+		}
+		else
+		{
+			if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP)
+			{
+				if(buttons[i].click)
+				{
+					result[i] |= buttons[i].click;
+					buttons[i].click = 0;
+					buttons[i].state = 0;
 				}
 			}
 		}

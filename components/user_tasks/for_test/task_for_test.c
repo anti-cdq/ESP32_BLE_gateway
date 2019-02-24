@@ -79,6 +79,14 @@ void task_for_test(void *pvParameter)
 		ws2818_update(ws2818_rgb, PIXEL_NUM);
 		if(xQueueReceive(button_evt_queue, for_test->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
+			for(uint8_t i=0;i<BUTTON_NUM;i++)
+			{
+				if(for_test->button_evt[i] & 0x0F)
+				{
+					printf("button %d: 0x%02X\n", i, for_test->button_evt[i]);
+				}
+			}
+
 			if(for_test->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
 			{
 				memset(ws2818_rgb, 0, sizeof(rgb_t)*PIXEL_NUM);
