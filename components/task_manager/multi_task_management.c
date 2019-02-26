@@ -30,17 +30,17 @@ void task_default(void *pvParameter)
 	{
 		if(xQueueReceive(button_evt_queue, button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
+			if((button_evt[BUTTON_UP]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				task_manager.task_index_c--;
 			}
 
-			if(button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
+			if((button_evt[BUTTON_DOWN]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				task_manager.task_index_c++;
 			}
 
-			if(button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			if((button_evt[BUTTON_MIDDLE]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				xTaskCreate(task_manager.task[task_manager.task_index_c].task,
 							task_manager.task[task_manager.task_index_c].name,

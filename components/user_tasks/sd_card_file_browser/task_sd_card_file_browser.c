@@ -324,11 +324,19 @@ void task_sd_card_file_browser(void *pvParameter)
     {
 		if(xQueueReceive(button_evt_queue, file_browser->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(file_browser->button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_UP]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				file_browser->file_index_c--;
 			}
-			if(file_browser->button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_DOWN]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
+			{
+				file_browser->file_index_c++;
+			}
+			if(file_browser->button_evt[BUTTON_UP] == BUTTON_EVT_HOLD_DOWN)
+			{
+				file_browser->file_index_c--;
+			}
+			if(file_browser->button_evt[BUTTON_DOWN] == BUTTON_EVT_HOLD_DOWN)
 			{
 				file_browser->file_index_c++;
 			}
@@ -337,11 +345,11 @@ void task_sd_card_file_browser(void *pvParameter)
 			if(file_browser->file_index_c > file_browser->file_index_max)
 				file_browser->file_index_c = file_browser->file_index_min;
 
-			if(file_browser->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_LEFT]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				file_browser->page_index_c--;
 			}
-			if(file_browser->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_RIGHT]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				file_browser->page_index_c++;
 			}
@@ -350,7 +358,7 @@ void task_sd_card_file_browser(void *pvParameter)
 			if(file_browser->page_index_c == file_browser->page_num)
 				file_browser->page_index_c = 0;
 
-			if(file_browser->button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_MIDDLE]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				if(file_browser->filetype[file_browser->file_index_c] == DT_DIR)
 				{
@@ -365,7 +373,7 @@ void task_sd_card_file_browser(void *pvParameter)
 				}
 			}
 
-			if(file_browser->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			if((file_browser->button_evt[BUTTON_BACK]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
 			{
 				if(file_browser->path_depth)
 				{
