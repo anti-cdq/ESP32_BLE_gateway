@@ -81,12 +81,12 @@ void task_string_input(void *pvParameter)
 	{
 		if(xQueueReceive(button_evt_queue, string_input->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(string_input->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				user_task_disable();
 			}
 
-			if(string_input->button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_UP] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				ESP_LOGI(TAG, "pressed");
 				if(string_input->input[string_input->char_index] == ASCII_CHAR_MAX)
@@ -95,7 +95,7 @@ void task_string_input(void *pvParameter)
 					string_input->input[string_input->char_index]++;
 				string_input->display_flag = 2;
 			}
-			if(string_input->button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_DOWN] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				if(string_input->input[string_input->char_index] == ASCII_CHAR_MIN)
 					string_input->input[string_input->char_index] = ASCII_CHAR_MAX;
@@ -103,7 +103,7 @@ void task_string_input(void *pvParameter)
 					string_input->input[string_input->char_index]--;
 				string_input->display_flag = 2;
 			}
-			if(string_input->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_LEFT] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				if(string_input->char_index > 0)
 				{
@@ -112,7 +112,7 @@ void task_string_input(void *pvParameter)
 						string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
 				}
 			}
-			if(string_input->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_RIGHT] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				if(string_input->char_index < MAX_STRING_LEN)
 				{
@@ -121,14 +121,14 @@ void task_string_input(void *pvParameter)
 						string_input->input[string_input->char_index] = ASCII_CHAR_MIN;
 				}
 			}
-			if(string_input->button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_MIDDLE] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				if(string_input->char_index < MAX_STRING_LEN)
 				{
 					string_input->char_index++;
 				}
 			}
-			if(string_input->button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_UP)
+			if(string_input->button_evt[BUTTON_BOOT] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				printf("String:%s\n", string_input->input);
 				memset(string_input->input, ASCII_CHAR_MIN, sizeof(MAX_STRING_LEN));

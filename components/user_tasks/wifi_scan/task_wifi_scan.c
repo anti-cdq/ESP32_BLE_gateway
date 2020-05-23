@@ -220,7 +220,7 @@ void task_wifi_scan(void *pvParameter)
 	{
 		if(xQueueReceive(button_evt_queue, wifi_scan->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(wifi_scan->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			if(wifi_scan->button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				user_task_disable();
 			}

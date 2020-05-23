@@ -30,10 +30,10 @@
 static const char *TAG = "SD CARD";
 
 
-#define FILE_PATH_LEN			50
-#define FILE_NUM_PER_PAGE		12
-#define FILE_BUFF_LEN			1024
-#define LCD_BUFF_LEN			(LCD_W*2)
+#define FILE_PATH_LEN						50
+#define FILE_NUM_PER_PAGE					12
+#define FILE_BUFF_LEN						1024
+#define LCD_BUFF_LEN						(LCD_W*2)
 
 #define SDMMC_HOST_USER() {\
     .flags = SDMMC_HOST_FLAG_4BIT, \
@@ -54,20 +54,20 @@ static const char *TAG = "SD CARD";
 typedef struct
 {
 	uint8_t display_flag;
-	uint8_t status;
 	uint32_t path_depth;
 	uint32_t file_num;
 	uint32_t page_num;
 	uint32_t page_file_num;
-	uint32_t page_index_p;
-	uint32_t page_index_c;
+	uint32_t page_index;
 	uint32_t file_index_p;
 	uint32_t file_index_c;
 	uint32_t file_index_min;
 	uint32_t file_index_max;
+	uint32_t status_stack[10][2];
 	uint8_t	Buff[LCD_W*3];
 	uint8_t buff_to_lcd[LCD_BUFF_LEN];
-	char current_path[FILE_PATH_LEN];
+	char folder_path[FILE_PATH_LEN];
+	char file_path[FILE_PATH_LEN];
 	char all_file_name[FILE_NUM_PER_PAGE][FILE_PATH_LEN];
 	uint8_t filetype[FILE_NUM_PER_PAGE];
 	uint8_t button_evt[BUTTON_NUM];
@@ -78,7 +78,7 @@ file_browser_s *file_browser;
 
 void show_bmp_center(char* path, uint16_t offsetX, uint16_t offsetY)
 {
-	uint16_t x1=0, y1=0, x2=LCD_W, y2=LCD_H;		//ͼƬ��ʾ����
+	uint16_t x1=0, y1=0, x2=LCD_W, y2=LCD_H;		//Í¼Æ¬ÏÔÊ¾ÇøÓò
 	uint16_t offset_width = 0, offset_height = 0;
 	uint16_t image_width = 0, image_height = 0;
 	uint16_t display_width = 0;
@@ -97,13 +97,13 @@ void show_bmp_center(char* path, uint16_t offsetX, uint16_t offsetY)
 	}
 	fread((char *)file_browser->Buff, 54, 1, f);
 
-	image_width = (uint16_t)file_browser->Buff[19]<<8 | (uint16_t)file_browser->Buff[18];	//��ȡͼƬ������Ϣ
-	image_height = (uint16_t)file_browser->Buff[23]<<8 | (uint16_t)file_browser->Buff[22];	//��ȡͼƬ�߶���Ϣ
+	image_width = (uint16_t)file_browser->Buff[19]<<8 | (uint16_t)file_browser->Buff[18];	//»ñÈ¡Í¼Æ¬¿í¶ÈÐÅÏ¢
+	image_height = (uint16_t)file_browser->Buff[23]<<8 | (uint16_t)file_browser->Buff[22];	//»ñÈ¡Í¼Æ¬¸ß¶ÈÐÅÏ¢
 
-	if(image_width < LCD_W)				//Ҫ��ʾ��ͼƬ����С��LCD���ȣ��������ʾ
+	if(image_width < LCD_W)				//ÒªÏÔÊ¾µÄÍ¼Æ¬¿í¶ÈÐ¡ÓÚLCD¿í¶È£¬Ôò¾ÓÖÐÏÔÊ¾
 	{
-		x1 = (LCD_W - image_width)/2;	//��ʾ��ʼ�ĺ�����
-		x2 = x1 + image_width;			//��ʾ�����ĺ�����
+		x1 = (LCD_W - image_width)/2;	//ÏÔÊ¾¿ªÊ¼µÄºá×ø±ê
+		x2 = x1 + image_width;			//ÏÔÊ¾½áÊøµÄºá×ø±ê
 		display_width = image_width;
 	}
 	else
@@ -122,10 +122,10 @@ void show_bmp_center(char* path, uint16_t offsetX, uint16_t offsetY)
 		offset_height = (image_height - LCD_H)/2;
 	}
 
-	temp = 54 + (image_width*3+image_width%4)*(image_height-offset_height-1) + 3*offset_width;	//���㽫Ҫ��ʾ�ĵ�һ�е�һ�����ص�λ��
+	temp = 54 + (image_width*3+image_width%4)*(image_height-offset_height-1) + 3*offset_width;	//¼ÆËã½«ÒªÏÔÊ¾µÄµÚÒ»ÐÐµÚÒ»¸öÏñËØµÄÎ»ÖÃ
 	fseek (f, temp, SEEK_SET);
 
-	Address_set(x1, y1, x2-1, y2-1);	//���ÿ�����䴰��
+	Address_set(x1, y1, x2-1, y2-1);	//ÉèÖÃ¿ìËÙÌî³ä´°¿Ú
 	for(y=y1;y<y2;y++)
 	{
 		fread((char *)file_browser->Buff, display_width*3, 1, f);
@@ -157,10 +157,25 @@ void show_bmp_info(char* path)
 	fread((char *)line, 54, 1, f);
 	fclose(f);
 
-	image_width = (uint16_t)line[19]<<8 | (uint16_t)line[18];	//��ȡͼƬ������Ϣ
-	image_height = (uint16_t)line[23]<<8 | (uint16_t)line[22];	//��ȡͼƬ�߶���Ϣ
+	image_width = (uint16_t)line[19]<<8 | (uint16_t)line[18];	//»ñÈ¡Í¼Æ¬¿í¶ÈÐÅÏ¢
+	image_height = (uint16_t)line[23]<<8 | (uint16_t)line[22];	//»ñÈ¡Í¼Æ¬¸ß¶ÈÐÅÏ¢
 
 	printf("size is: %d*%d\n", image_width, image_height);
+}
+
+
+uint8_t is_it_a_bmp_file(char* file_path)
+{
+	uint8_t i;
+	for(i=0;i<FILE_PATH_LEN-4;i++)
+	{
+		if(file_path[i] == '.')
+			if(file_path[i+1] == 'b' || file_path[i+1] == 'B')
+				if(file_path[i+2] == 'm' || file_path[i+2] == 'M')
+					if(file_path[i+3] == 'p' || file_path[i+3] == 'P')
+						return true;
+	}
+	return false;
 }
 
 
@@ -225,16 +240,18 @@ void lcd_display_task_sd_card_file_browser(void)
 		return;
 	if(file_browser->display_flag == 1)
 	{
-		show_bmp_center(file_browser->current_path, 0, 0);
+		LCD_Clear(BLACK);
+		show_bmp_center(file_browser->file_path, 0, 0);
+		file_browser->display_flag = 0;
 	}
 	else if(file_browser->display_flag == 2)
 	{
 		LCD_Clear(BLACK);
 		memset(temp, 0, sizeof(temp));
-		LCD_ShowString(0, 0, (const uint8_t *)file_browser->current_path);
+		LCD_ShowString(0, 0, (const uint8_t *)file_browser->folder_path);
 		sprintf(temp,
 				"  %3d/%-3d",
-				file_browser->page_index_c+1,
+				file_browser->page_index+1,
 				file_browser->page_num);
 		LCD_ShowString(160, 0, (const uint8_t *)temp);
 
@@ -243,17 +260,17 @@ void lcd_display_task_sd_card_file_browser(void)
 			LCD_ShowString(30, i*18+18, (const uint8_t *)file_browser->all_file_name[i]);
 		}
 		file_browser->display_flag = 0;
-		file_browser->file_index_p = file_browser->file_index_max;
-		file_browser->file_index_c = file_browser->file_index_min;
+		file_browser->file_index_c = file_browser->status_stack[file_browser->path_depth][1];
+		file_browser->file_index_p = file_browser->file_index_c;
+		LCD_ShowString(	15, (file_browser->file_index_c%FILE_NUM_PER_PAGE)*18+18,
+						(const uint8_t *)">");
 	}
 
 	if(file_browser->file_index_c != file_browser->file_index_p)
 	{
-		LCD_ShowString(	15,
-						(file_browser->file_index_p%FILE_NUM_PER_PAGE)*18 + 18,
+		LCD_ShowString(	15, (file_browser->file_index_p%FILE_NUM_PER_PAGE)*18 + 18,
 						(const uint8_t *)" ");
-		LCD_ShowString(	15,
-						(file_browser->file_index_c%FILE_NUM_PER_PAGE)*18+18,
+		LCD_ShowString(	15, (file_browser->file_index_c%FILE_NUM_PER_PAGE)*18+18,
 						(const uint8_t *)">");
 
 		file_browser->file_index_p = file_browser->file_index_c;
@@ -261,14 +278,52 @@ void lcd_display_task_sd_card_file_browser(void)
 }
 
 
+void page_update(void)
+{
+	if(file_browser->page_index == 0xFFFFFFFF)
+		file_browser->page_index = file_browser->page_num - 1;
+	if(file_browser->page_index == file_browser->page_num)
+		file_browser->page_index = 0;
+	file_browser->status_stack[file_browser->path_depth][1] = file_browser->page_index * FILE_NUM_PER_PAGE;
+
+	if(file_browser->page_index < (file_browser->page_num - 1))
+		file_browser->page_file_num = FILE_NUM_PER_PAGE;
+	else
+	{
+		file_browser->page_file_num = file_browser->file_num%FILE_NUM_PER_PAGE;
+		if(file_browser->page_file_num == 0)
+			file_browser->page_file_num = FILE_NUM_PER_PAGE;
+	}
+	file_browser->file_index_min = file_browser->page_index * FILE_NUM_PER_PAGE;
+	file_browser->file_index_max = file_browser->page_index * FILE_NUM_PER_PAGE + file_browser->page_file_num - 1;
+	get_file_name(file_browser->folder_path, file_browser->file_index_min + 1);
+	file_browser->display_flag = 2;
+}
+
+
 void update_to_path(char* path)
 {
+	ESP_LOGI(TAG, "Path: %s", path);
     file_browser->file_num = get_file_num(path);
     file_browser->page_num = file_browser->file_num/FILE_NUM_PER_PAGE;
     if(file_browser->file_num%FILE_NUM_PER_PAGE != 0)
     	file_browser->page_num++;
-    file_browser->page_index_c = 0;
-    file_browser->page_index_p = 1;
+    file_browser->page_index = file_browser->status_stack[file_browser->path_depth][0];
+	if(file_browser->page_index == file_browser->page_num - 1)
+	{
+		file_browser->page_file_num = file_browser->file_num%FILE_NUM_PER_PAGE;
+		if(file_browser->page_file_num == 0)
+			file_browser->page_file_num = FILE_NUM_PER_PAGE;
+	}
+	else
+	{
+		file_browser->page_file_num = FILE_NUM_PER_PAGE;
+	}
+	file_browser->file_index_min = file_browser->page_index * FILE_NUM_PER_PAGE;
+	file_browser->file_index_max = file_browser->page_index * FILE_NUM_PER_PAGE + file_browser->page_file_num - 1;
+	get_file_name(file_browser->folder_path, file_browser->file_index_min + 1);
+	file_browser->display_flag = 2;
+    ESP_LOGI(TAG, "file num:%d", file_browser->file_num);
 }
 
 
@@ -282,7 +337,7 @@ void task_sd_card_file_browser(void *pvParameter)
     file_browser = (file_browser_s *)malloc(sizeof(file_browser_s));
 
 	memset(file_browser, 0, sizeof(file_browser_s));
-	memcpy(file_browser->current_path, "/sdcard", FILE_PATH_LEN);
+	memcpy(file_browser->folder_path, "/sdcard", FILE_PATH_LEN);
 	file_browser->display_flag = 0;
 
 	gpio_set_pull_mode(15, GPIO_PULLUP_ONLY);   // CMD, needed in 4- and 1- line modes
@@ -318,99 +373,114 @@ void task_sd_card_file_browser(void *pvParameter)
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
-    update_to_path(file_browser->current_path);
+    update_to_path(file_browser->folder_path);
 
     while(1)
     {
 		if(xQueueReceive(button_evt_queue, file_browser->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if((file_browser->button_evt[BUTTON_UP]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
+			if((file_browser->button_evt[BUTTON_UP]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				file_browser->file_index_c--;
+				if(file_browser->file_index_c == (file_browser->file_index_min - 1))
+					file_browser->file_index_c = file_browser->file_index_max;
 			}
-			if((file_browser->button_evt[BUTTON_DOWN]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
+			if((file_browser->button_evt[BUTTON_DOWN]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				file_browser->file_index_c++;
+				if(file_browser->file_index_c > file_browser->file_index_max)
+					file_browser->file_index_c = file_browser->file_index_min;
 			}
 			if(file_browser->button_evt[BUTTON_UP] == BUTTON_EVT_HOLD_DOWN)
 			{
 				file_browser->file_index_c--;
+				if(file_browser->file_index_c == (file_browser->file_index_min - 1))
+					file_browser->file_index_c = file_browser->file_index_max;
 			}
 			if(file_browser->button_evt[BUTTON_DOWN] == BUTTON_EVT_HOLD_DOWN)
 			{
 				file_browser->file_index_c++;
+				if(file_browser->file_index_c > file_browser->file_index_max)
+					file_browser->file_index_c = file_browser->file_index_min;
 			}
-			if(file_browser->file_index_c == (file_browser->file_index_min - 1))
-				file_browser->file_index_c = file_browser->file_index_max;
-			if(file_browser->file_index_c > file_browser->file_index_max)
-				file_browser->file_index_c = file_browser->file_index_min;
+			if((file_browser->button_evt[BUTTON_LEFT]) == BUTTON_EVT_PRESSED_DOWN)
+			{
+				file_browser->page_index--;
+				page_update();
+			}
+			if((file_browser->button_evt[BUTTON_RIGHT]) == BUTTON_EVT_PRESSED_DOWN)
+			{
+				file_browser->page_index++;
+				page_update();
+			}
 
-			if((file_browser->button_evt[BUTTON_LEFT]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
+			if((file_browser->button_evt[BUTTON_MIDDLE]) == BUTTON_EVT_PRESSED_DOWN)
 			{
-				file_browser->page_index_c--;
-			}
-			if((file_browser->button_evt[BUTTON_RIGHT]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
-			{
-				file_browser->page_index_c++;
-			}
-			if(file_browser->page_index_c == 0xFFFFFFFF)
-				file_browser->page_index_c = file_browser->page_num - 1;
-			if(file_browser->page_index_c == file_browser->page_num)
-				file_browser->page_index_c = 0;
-
-			if((file_browser->button_evt[BUTTON_MIDDLE]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
-			{
-				if(file_browser->filetype[file_browser->file_index_c] == DT_DIR)
+				if(file_browser->filetype[file_browser->file_index_c - file_browser->file_index_min] == DT_DIR)
 				{
-					sprintf(file_browser->current_path,
+					sprintf(file_browser->folder_path,
 							"%.*s%.*s%.*s",
-							strlen(file_browser->current_path),
-							file_browser->current_path,strlen("/"), "/",
-							strlen(file_browser->all_file_name[file_browser->file_index_c]),
-							file_browser->all_file_name[file_browser->file_index_c]);
-					update_to_path(file_browser->current_path);
+							strlen(file_browser->folder_path),
+							file_browser->folder_path,strlen("/"), "/",
+							strlen(file_browser->all_file_name[file_browser->file_index_c - file_browser->file_index_min]),
+							file_browser->all_file_name[file_browser->file_index_c - file_browser->file_index_min]);
 					file_browser->path_depth++;
+					file_browser->status_stack[file_browser->path_depth-1][0] = file_browser->page_index;
+					file_browser->status_stack[file_browser->path_depth-1][1] = file_browser->file_index_c;
+					file_browser->status_stack[file_browser->path_depth][0] = 0;
+					file_browser->status_stack[file_browser->path_depth][1] = 0;
+					update_to_path(file_browser->folder_path);
+				}
+				else
+				{
+					if(is_it_a_bmp_file(file_browser->all_file_name[file_browser->file_index_c - file_browser->file_index_min]) == true)
+					{
+						file_browser->status_stack[file_browser->path_depth][0] = file_browser->page_index;
+						file_browser->status_stack[file_browser->path_depth][1] = file_browser->file_index_c;
+						sprintf(file_browser->file_path,
+								"%.*s%.*s%.*s",
+								strlen(file_browser->folder_path),
+								file_browser->folder_path,strlen("/"), "/",
+								strlen(file_browser->all_file_name[file_browser->file_index_c - file_browser->file_index_min]),
+								file_browser->all_file_name[file_browser->file_index_c - file_browser->file_index_min]);
+						file_browser->display_flag = 1;
+						while(1)
+					    {
+							if(xQueueReceive(button_evt_queue, file_browser->button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
+							{
+								if((file_browser->button_evt[BUTTON_BACK]) == BUTTON_EVT_PRESSED_DOWN)
+								{
+									update_to_path(file_browser->folder_path);
+									break;
+								}
+							}
+					    }
+						continue;
+					}
 				}
 			}
 
-			if((file_browser->button_evt[BUTTON_BACK]&BUTTON_EVT_MASK) == BUTTON_EVT_SINGLE_CLICK)
+			if((file_browser->button_evt[BUTTON_BACK]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				if(file_browser->path_depth)
 				{
 					file_browser->path_depth--;
 					for(uint32_t i=FILE_PATH_LEN-1;i>0;i--)
 					{
-						if(file_browser->current_path[i] == '/')
+						if(file_browser->folder_path[i] == '/')
 						{
-							file_browser->current_path[i] = 0;
+							file_browser->folder_path[i] = 0;
 							break;
 						}
-						file_browser->current_path[i] = 0;
+						file_browser->folder_path[i] = 0;
 					}
-					update_to_path(file_browser->current_path);
+					update_to_path(file_browser->folder_path);
 				}
 				else
 				{
 					user_task_disable();
 				}
 			}
-		}
-
-		if(file_browser->page_index_c != file_browser->page_index_p)
-		{
-		    if(file_browser->page_index_c < (file_browser->page_num - 1))
-		    	file_browser->page_file_num = FILE_NUM_PER_PAGE;
-		    else
-		    {
-		    	file_browser->page_file_num = file_browser->file_num%FILE_NUM_PER_PAGE;
-		    	if(file_browser->page_file_num == 0)
-			    	file_browser->page_file_num = FILE_NUM_PER_PAGE;
-		    }
-			file_browser->file_index_min = file_browser->page_index_c * FILE_NUM_PER_PAGE;
-			file_browser->file_index_max = file_browser->page_index_c * FILE_NUM_PER_PAGE + file_browser->page_file_num - 1;
-		    get_file_name(file_browser->current_path, file_browser->file_index_min + 1);
-			file_browser->page_index_p = file_browser->page_index_c;
-			file_browser->display_flag = 2;
 		}
     }
 }

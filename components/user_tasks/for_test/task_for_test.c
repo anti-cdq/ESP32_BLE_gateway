@@ -81,13 +81,13 @@ void task_for_test(void *pvParameter)
 		{
 			for(uint8_t i=0;i<BUTTON_NUM;i++)
 			{
-				if(for_test->button_evt[i] & 0x0F)
+				if(for_test->button_evt[i])
 				{
 					printf("button %d: 0x%02X\n", i, for_test->button_evt[i]);
 				}
 			}
 
-			if((for_test->button_evt[BUTTON_BACK]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_BACK]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				memset(ws2818_rgb, 0, sizeof(rgb_t)*PIXEL_NUM);
 				ws2818_update(ws2818_rgb, PIXEL_NUM);
@@ -95,7 +95,7 @@ void task_for_test(void *pvParameter)
 				user_task_disable();
 			}
 
-			if((for_test->button_evt[BUTTON_UP]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_UP]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				for_test->counter++;
 				pixel_index++;
@@ -103,7 +103,7 @@ void task_for_test(void *pvParameter)
 					pixel_index = 0x00;
 				for_test->display_flag = 2;
 			}
-			if((for_test->button_evt[BUTTON_DOWN]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_DOWN]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				for_test->counter--;
 				pixel_index--;
@@ -111,13 +111,13 @@ void task_for_test(void *pvParameter)
 					pixel_index = 0x07;
 				for_test->display_flag = 2;
 			}
-			if((for_test->button_evt[BUTTON_LEFT]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_LEFT]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				for_test->counter--;
 				ws2818_rgb[pixel_index].green--;
 				for_test->display_flag = 2;
 			}
-			if((for_test->button_evt[BUTTON_RIGHT]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_RIGHT]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				for_test->counter++;
 				ws2818_rgb[pixel_index].green++;
@@ -136,7 +136,7 @@ void task_for_test(void *pvParameter)
 				for_test->display_flag = 2;
 			}
 
-			if((for_test->button_evt[BUTTON_BOOT]&0x0F) == BUTTON_EVT_SINGLE_CLICK)
+			if((for_test->button_evt[BUTTON_BOOT]) == BUTTON_EVT_PRESSED_DOWN)
 			{
 				for_test->counter = 1000;
 				for_test->display_flag = 2;

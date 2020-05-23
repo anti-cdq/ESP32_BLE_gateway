@@ -18,9 +18,9 @@
 #define	BUTTON_MIDDLE_IO					22
 
 
-#define	BUTTON_IO_STATE_PRESSED_UP			0x08
-#define	BUTTON_IO_STATE_PRESSED_DOWN		0x07
-#define	BUTTON_IO_STATE_HOLD_DOWN			0x0F
+#define	BUTTON_IO_STATE_PRESSED_UP			0x80
+#define	BUTTON_IO_STATE_PRESSED_DOWN		0x7F
+#define	BUTTON_IO_STATE_HOLD_DOWN			0xFF
 #define	BUTTON_IO_STATE_HOLD_UP				0x00
 
 
@@ -30,9 +30,9 @@
 #define	BUTTON_STATE_LONG_PRESS				3
 
 
-#define BUTTON_SHORT_CLICK_UP				15
-#define BUTTON_SHORT_CLICK_DOWN				20
-#define BUTTON_LONG_PRESS					30
+#define BUTTON_SHORT_CLICK_UP				20
+#define BUTTON_SHORT_CLICK_DOWN				35
+#define BUTTON_LONG_PRESS					50
 
 #define	BUTTON_HOLD_PRESCALE				5
 
@@ -107,19 +107,19 @@ void button_detect(void)
 		else
 			buttons[i].cnt++;
 
-		switch(buttons[i].io&0x0F)
+		switch(buttons[i].io)
 		{
-			case BUTTON_IO_STATE_PRESSED_DOWN:	//按下
+			case BUTTON_IO_STATE_PRESSED_DOWN:				//按下
 				result[i] = BUTTON_EVT_PRESSED_DOWN;
 				buttons[i].cnt = 0;
-				buttons[i].state = BUTTON_STATE_PRESSED_UP;
+				buttons[i].state = BUTTON_STATE_PRESSED_DOWN;
 				break;
 
-			case BUTTON_IO_STATE_PRESSED_UP:	//弹起
+			case BUTTON_IO_STATE_PRESSED_UP:				//弹起
 				result[i] = BUTTON_EVT_PRESSED_UP;
-				if(buttons[i].state == BUTTON_STATE_PRESSED_UP && buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
+				if(buttons[i].state == BUTTON_STATE_PRESSED_DOWN && buttons[i].cnt < BUTTON_SHORT_CLICK_DOWN)
 				{
-					buttons[i].state = BUTTON_STATE_PRESSED_DOWN;
+					buttons[i].state = BUTTON_STATE_PRESSED_UP;
 					buttons[i].click++;
 					buttons[i].cnt = 0;
 				}
@@ -127,8 +127,8 @@ void button_detect(void)
 					buttons[i].state = BUTTON_STATE_IDLE;
 				break;
 
-			case BUTTON_IO_STATE_HOLD_DOWN:		//按住
-				if(buttons[i].cnt > BUTTON_LONG_PRESS)			//降低长按触发频率
+			case BUTTON_IO_STATE_HOLD_DOWN:					//按住
+				if(buttons[i].cnt > BUTTON_LONG_PRESS)		//降低长按触发频率
 				{
 					if(buttons[i].click == 0 || buttons[i].state == BUTTON_STATE_LONG_PRESS)
 					{
@@ -144,13 +144,11 @@ void button_detect(void)
 				break;
 
 			default:
-				if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP && buttons[i].state == BUTTON_STATE_PRESSED_DOWN)
+				if(buttons[i].cnt > BUTTON_SHORT_CLICK_UP && buttons[i].state == BUTTON_STATE_PRESSED_UP)
 				{
-					if(buttons[i].click)
-					{
+					buttons[i].state = BUTTON_STATE_IDLE;
+					if(buttons[i].click < 4)
 						result[i] |= buttons[i].click;
-						buttons[i].state = BUTTON_STATE_IDLE;
-					}
 				}
 				break;
 		}

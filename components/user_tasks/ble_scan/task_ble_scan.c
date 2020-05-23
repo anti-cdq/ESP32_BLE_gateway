@@ -635,7 +635,7 @@ void task_ble_scan(void *pvParameter)
 		}
 		if(xQueueReceive(button_evt_queue, button_evt, 10/portTICK_PERIOD_MS) == pdTRUE)
 		{
-			if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_UP)
+			if(button_evt[BUTTON_BACK] == BUTTON_EVT_PRESSED_DOWN)
 			{
 				user_task_disable();
 			}
