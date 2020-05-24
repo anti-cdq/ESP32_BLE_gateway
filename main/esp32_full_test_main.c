@@ -28,6 +28,7 @@
 #include "task_wifi_scan.h"
 #include "task_sd_card_file_browser.h"
 #include "task_button.h"
+#include "cdq_hal_iic.h"
 
 
 /************ global variables ************/
@@ -52,6 +53,36 @@ void app_main()
 {
 	esp_err_t ret;
 	int64_t temp1, temp2;
+    uint8_t iic_addr_cache[255];
+    uint8_t i;
+
+    iic_gpio_init();
+    printf("\n\nMPU6050 register: \n");
+    iic_read_byte(0x68, 0x75, iic_addr_cache);
+    iic_write_byte(0x68, 0x74, 25);
+    iic_read_byte(0x68, 0x74, &iic_addr_cache[1]);
+    for(i=0;i<2;i++)
+    {
+        printf("0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n",
+                iic_addr_cache[i*5],
+                iic_addr_cache[i*5+1],
+                iic_addr_cache[i*5+2],
+                iic_addr_cache[i*5+3],
+                iic_addr_cache[i*5+4]);
+    }
+
+    printf("\n\nQMC5883L register: \n");
+    iic_write_byte(0x1A, 0x0B, 25);
+    iic_read_byte(0x1A, 0x0B, iic_addr_cache);
+    for(i=0;i<2;i++)
+    {
+        printf("0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n",
+                iic_addr_cache[i*5],
+                iic_addr_cache[i*5+1],
+                iic_addr_cache[i*5+2],
+                iic_addr_cache[i*5+3],
+                iic_addr_cache[i*5+4]);
+    }
 
 	uart_set_baudrate(UART_NUM_0, 115200);
 	led_init();
